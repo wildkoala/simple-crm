@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand colors - Pretorian */
+    --gray-brown: 14 11 11; /* #231C1C converted to HSL */
+    --warm-orange: 24 100 53; /* #FF9010 converted to HSL */
+    --light-turquoise: 177 55 60; /* Southwest-inspired turquoise */
+    --gold: 43 97 63; /* Southwest-inspired gold */
+    --warm-gray: 30 10 90; /* Warm light gray */
+    
+    /* Semantic tokens */
+    --background: 0 0 100; /* White */
+    --foreground: 14 11 11; /* Gray Brown for text */
+    
+    --card: 0 0 100;
+    --card-foreground: 14 11 11;
+    
+    --popover: 0 0 100;
+    --popover-foreground: 14 11 11;
+    
+    --primary: 24 100 53; /* Warm Orange */
+    --primary-foreground: 0 0 100; /* White */
+    
+    --secondary: 177 55 60; /* Light Turquoise */
+    --secondary-foreground: 14 11 11; /* Gray Brown */
+    
+    --muted: 30 10 90; /* Warm Gray */
+    --muted-foreground: 30 10 50; /* Faded gray for placeholders and muted text */
+    
+    --accent: 43 97 63; /* Gold */
+    --accent-foreground: 14 11 11;
+    
+    --destructive: 0 84 60;
+    --destructive-foreground: 0 0 100;
+    
+    --border: 30 10 85;
+    --input: 30 10 85;
+    --ring: 24 100 53; /* Warm Orange */
+    
+    --radius: 0.5rem;
+    
+    --sidebar-background: 0 0 100;
+    --sidebar-foreground: 14 11 11;
+    --sidebar-primary: 24 100 53;
+    --sidebar-primary-foreground: 0 0 100;
+    --sidebar-accent: 30 10 90;
+    --sidebar-accent-foreground: 14 11 11;
+    --sidebar-border: 30 10 85;
+    --sidebar-ring: 24 100 53;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
