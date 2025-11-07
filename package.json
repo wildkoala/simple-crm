@@ -1,13 +1,13 @@
 {
-  "name": "pretorin-crm",
+  "name": "simple-crm",
   "private": false,
   "version": "1.0.0",
   "type": "module",
-  "description": "A modern, AI-first CRM for managing sales contacts and government contract opportunities",
+  "description": "A bare bones CRM for startups in the govtech space. Track contract opportunities and individual contacts.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR-USERNAME/pretorin-crm.git"
+    "url": "https://github.com/YOUR-USERNAME/simple-crm.git"
   },
   "scripts": {
     "dev": "vite",
