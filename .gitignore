@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dev script artifacts
+backend.log
+backend.pid
+
 node_modules
 dist
 dist-ssr
