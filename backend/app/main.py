@@ -19,8 +19,16 @@ finally:
 app = FastAPI(
     title="Pretorin CRM API",
     description="API for managing sales contacts and government contract opportunities",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
+
+# Disable favicon
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return {"detail": "Not Found"}
 
 # Configure CORS
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8080")

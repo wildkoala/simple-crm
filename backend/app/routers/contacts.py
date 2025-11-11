@@ -15,8 +15,8 @@ def get_contacts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all contacts"""
-    contacts = db.query(Contact).all()
+    """Get all contacts for the current user"""
+    contacts = db.query(Contact).filter(Contact.assigned_user_id == current_user.id).all()
     # Convert to schema format
     return [
         {
@@ -41,7 +41,10 @@ def get_contact(
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific contact"""
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    contact = db.query(Contact).filter(
+        Contact.id == contact_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -111,7 +114,10 @@ def update_contact(
     current_user: User = Depends(get_current_user)
 ):
     """Update a contact"""
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    contact = db.query(Contact).filter(
+        Contact.id == contact_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -156,7 +162,10 @@ def delete_contact(
     current_user: User = Depends(get_current_user)
 ):
     """Delete a contact"""
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    contact = db.query(Contact).filter(
+        Contact.id == contact_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

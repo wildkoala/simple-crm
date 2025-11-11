@@ -75,7 +75,38 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: 'admin' | 'user';
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
+}
+
+export interface UserCreateByAdmin {
+  email: string;
+  name: string;
+  password: string;
+  role: 'admin' | 'user';
+}
+
+export interface UserUpdate {
+  name?: string;
+  email?: string;
+  role?: 'admin' | 'user';
+  is_active?: boolean;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordReset {
+  token: string;
+  new_password: string;
+}
+
+export interface PasswordChange {
+  current_password: string;
+  new_password: string;
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthToken> {
@@ -250,4 +281,50 @@ export async function getOverdueFollowUps(): Promise<Contact[]> {
 // Users API
 export async function getUsers(): Promise<User[]> {
   return fetchApi<User[]>('/users');
+}
+
+export async function getUser(userId: string): Promise<User> {
+  return fetchApi<User>(`/users/${userId}`);
+}
+
+export async function createUser(user: UserCreateByAdmin): Promise<User> {
+  return fetchApi<User>('/users', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  });
+}
+
+export async function updateUser(userId: string, updates: UserUpdate): Promise<User> {
+  return fetchApi<User>(`/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteUser(userId: string): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>(`/users/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Password reset API
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>('/auth/password-reset-request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(data: PasswordReset): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>('/auth/password-reset', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function changePassword(data: PasswordChange): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>('/auth/password-change', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }

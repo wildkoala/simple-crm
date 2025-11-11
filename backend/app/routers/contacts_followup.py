@@ -16,11 +16,12 @@ def get_due_follow_ups(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get contacts with follow-ups due within the specified number of days"""
+    """Get contacts with follow-ups due within the specified number of days for the current user"""
     today = datetime.utcnow().date()
     future_date = today + timedelta(days=days_ahead)
 
     contacts = db.query(Contact).filter(
+        Contact.assigned_user_id == current_user.id,
         Contact.follow_up_date.isnot(None),
         Contact.follow_up_date <= datetime.combine(future_date, datetime.min.time())
     ).order_by(Contact.follow_up_date.asc()).all()
@@ -45,10 +46,11 @@ def get_overdue_follow_ups(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get contacts with overdue follow-ups"""
+    """Get contacts with overdue follow-ups for the current user"""
     today = datetime.utcnow().date()
 
     contacts = db.query(Contact).filter(
+        Contact.assigned_user_id == current_user.id,
         Contact.follow_up_date.isnot(None),
         Contact.follow_up_date < datetime.combine(today, datetime.min.time())
     ).order_by(Contact.follow_up_date.asc()).all()

@@ -74,7 +74,14 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="user")  # "admin" or "user"
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(String, ForeignKey("users.id"), nullable=True)
+    password_reset_token = Column(String, nullable=True, index=True)
+    password_reset_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     assigned_contacts = relationship("Contact", back_populates="assigned_user")
+    created_users = relationship("User", remote_side=[id])

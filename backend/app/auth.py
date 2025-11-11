@@ -63,3 +63,55 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_active_user(
+    current_user: User = Depends(get_current_user)
+):
+    """Ensure user is active"""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account"
+        )
+    return current_user
+
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_active_user)
+):
+    """Ensure user is an admin"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
+
+
+def generate_password_reset_token() -> str:
+    """Generate a secure random token for password reset"""
+    import secrets
+    return secrets.token_urlsafe(32)
+
+
+def create_password_reset_token(user: User, db: Session) -> str:
+    """Create and store password reset token"""
+    token = generate_password_reset_token()
+    expires = datetime.utcnow() + timedelta(hours=24)
+
+    user.password_reset_token = token
+    user.password_reset_expires = expires
+    db.commit()
+
+    return token
+
+
+def verify_reset_token(token: str, db: Session) -> Optional[User]:
+    """Verify password reset token and return user if valid"""
+    user = db.query(User).filter(
+        User.password_reset_token == token,
+        User.password_reset_expires > datetime.utcnow()
+    ).first()
+
+    return user

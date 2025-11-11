@@ -15,7 +15,7 @@ def get_contracts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all contracts"""
+    """Get all contracts - contracts are shared across all users"""
     contracts = db.query(Contract).all()
     return [
         {
@@ -34,7 +34,7 @@ def get_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get a specific contract"""
+    """Get a specific contract - contracts are shared across all users"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(
@@ -68,9 +68,11 @@ def create_contract(
         notes=contract.notes
     )
 
-    # Add assigned contacts
+    # Add assigned contacts - can assign any contacts
     if contract.assigned_contact_ids:
-        contacts = db.query(Contact).filter(Contact.id.in_(contract.assigned_contact_ids)).all()
+        contacts = db.query(Contact).filter(
+            Contact.id.in_(contract.assigned_contact_ids)
+        ).all()
         new_contract.assigned_contacts = contacts
 
     db.add(new_contract)
@@ -92,7 +94,7 @@ def update_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Update a contract"""
+    """Update a contract - contracts are shared across all users"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(
@@ -109,9 +111,11 @@ def update_contract(
     contract.submission_link = contract_update.submission_link
     contract.notes = contract_update.notes
 
-    # Update assigned contacts
+    # Update assigned contacts - can assign any contacts
     if contract_update.assigned_contact_ids is not None:
-        contacts = db.query(Contact).filter(Contact.id.in_(contract_update.assigned_contact_ids)).all()
+        contacts = db.query(Contact).filter(
+            Contact.id.in_(contract_update.assigned_contact_ids)
+        ).all()
         contract.assigned_contacts = contacts
 
     db.commit()
@@ -131,7 +135,7 @@ def delete_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a contract"""
+    """Delete a contract - contracts are shared across all users"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(

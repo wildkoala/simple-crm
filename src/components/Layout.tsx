@@ -1,17 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, LogOut } from 'lucide-react';
+import { Home, Users, FileText, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/contacts', label: 'Contacts', icon: Users },
     { path: '/contracts', label: 'Contracts', icon: FileText },
   ];
+
+  // Add admin-only nav items
+  if (isAdmin) {
+    navItems.push({ path: '/users', label: 'Users', icon: Shield });
+  }
 
   return (
     <div className="min-h-screen bg-background">

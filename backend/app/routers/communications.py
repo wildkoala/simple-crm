@@ -16,8 +16,8 @@ def get_communications(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all communications, optionally filtered by contact_id"""
-    query = db.query(Communication)
+    """Get all communications for the current user's contacts, optionally filtered by contact_id"""
+    query = db.query(Communication).join(Contact).filter(Contact.assigned_user_id == current_user.id)
     if contact_id:
         query = query.filter(Communication.contact_id == contact_id)
 
@@ -39,7 +39,10 @@ def get_communication(
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific communication"""
-    communication = db.query(Communication).filter(Communication.id == communication_id).first()
+    communication = db.query(Communication).join(Contact).filter(
+        Communication.id == communication_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not communication:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -60,8 +63,11 @@ def create_communication(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new communication"""
-    # Verify contact exists
-    contact = db.query(Contact).filter(Contact.id == communication.contact_id).first()
+    # Verify contact exists and belongs to current user
+    contact = db.query(Contact).filter(
+        Contact.id == communication.contact_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -98,7 +104,10 @@ def delete_communication(
     current_user: User = Depends(get_current_user)
 ):
     """Delete a communication"""
-    communication = db.query(Communication).filter(Communication.id == communication_id).first()
+    communication = db.query(Communication).join(Contact).filter(
+        Communication.id == communication_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
     if not communication:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

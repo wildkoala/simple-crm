@@ -209,8 +209,10 @@ def get_seed_user():
     return User(
         id=generate_id(),
         email="demo@pretorin.com",
-        name="Demo User",
+        name="Demo Admin User",
         hashed_password=get_password_hash("demo123"),
+        role="admin",
+        is_active=True,
         created_at=datetime.utcnow()
     )
 
