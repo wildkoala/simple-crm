@@ -34,45 +34,54 @@ This is a simple, straightforward CRM designed specifically for government techn
 - Node.js & npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 - Python 3.8+ for the backend
 
-### Installation
+### Quick Start
 
-**1. Clone and install frontend dependencies:**
+The easiest way to run the application is using the included development script:
+
+**Linux/Mac:**
 ```sh
 git clone https://github.com/YOUR-USERNAME/simple-crm.git
 cd simple-crm
-npm install
-
-# Set up environment variables
-cp .env.local.example .env.local
-# Edit .env.local if needed (default: http://localhost:8000)
+./dev.sh
 ```
 
-**2. Set up the backend:**
+**Windows:**
 ```sh
-cd backend
-
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env and change SECRET_KEY for production
+git clone https://github.com/YOUR-USERNAME/simple-crm.git
+cd simple-crm
+dev.bat
 ```
 
-**3. Run the application:**
-```sh
-# In the backend directory (with venv activated):
-python run.py
-
-# In a new terminal, from the project root:
-npm run dev
-```
+The script will:
+- Set up Python virtual environment and install backend dependencies
+- Install frontend dependencies
+- Create environment files from examples (if not present)
+- Start both backend and frontend servers
 
 The frontend will be at **http://localhost:5173** and the backend API at **http://localhost:8000**.
+
+Press `Ctrl+C` to stop all services.
+
+### Manual Setup (Alternative)
+
+If you prefer to run services separately:
+
+**1. Set up and run the backend:**
+```sh
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+python run.py
+```
+
+**2. In a new terminal, set up and run the frontend:**
+```sh
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
 
 ### Default Login
 

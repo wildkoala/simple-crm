@@ -34,14 +34,10 @@ async function fetchApi<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  console.log('API Request:', `${API_BASE_URL}${endpoint}`, options.method || 'GET');
-
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
-
-  console.log('API Response:', response.status, response.statusText);
 
   if (!response.ok) {
     if (response.status === 401) {
