@@ -85,6 +85,40 @@ class Contract(ContractBase):
         from_attributes = True
 
 
+# SAM.gov Import schemas
+class SAMGovPointOfContact(BaseModel):
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    fullName: Optional[str] = None
+    type: Optional[str] = None
+
+
+class SAMGovOpportunity(BaseModel):
+    noticeId: str
+    title: str
+    solicitationNumber: Optional[str] = None
+    description: Optional[str] = None
+    responseDeadLine: Optional[str] = None
+    postedDate: Optional[str] = None
+    naicsCode: Optional[str] = None
+    uiLink: Optional[str] = None
+    pointOfContact: Optional[List[SAMGovPointOfContact]] = None
+    source: str = "SAM.gov"
+    notes: Optional[str] = ""
+
+
+class SAMGovImportRequest(BaseModel):
+    opportunities: List[SAMGovOpportunity]
+    auto_create_contacts: bool = True
+
+
+class SAMGovImportResponse(BaseModel):
+    contracts_created: int
+    contracts_skipped: int
+    contacts_created: int
+    errors: List[str] = []
+
+
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr

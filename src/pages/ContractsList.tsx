@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 export default function ContractsList() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [contracts, setContracts] = useState<api.Contract[]>([]);
   const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +43,16 @@ export default function ContractsList() {
       const matchesSearch =
         contract.title.toLowerCase().includes(query) ||
         contract.description.toLowerCase().includes(query);
-      const matchesStatus = statusFilter === 'all' || contract.status === statusFilter;
+
+      let matchesStatus = false;
+      if (statusFilter === 'all') {
+        matchesStatus = true;
+      } else if (statusFilter === 'active') {
+        matchesStatus = contract.status === 'prospective' || contract.status === 'in progress';
+      } else {
+        matchesStatus = contract.status === statusFilter;
+      }
+
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
@@ -99,6 +108,7 @@ export default function ContractsList() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="prospective">Prospective</SelectItem>
               <SelectItem value="in progress">In Progress</SelectItem>
@@ -165,9 +175,9 @@ export default function ContractsList() {
         ) : (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground">
-              {searchQuery || statusFilter !== 'all'
+              {searchQuery || statusFilter !== 'active'
                 ? 'No contracts found matching your filters.'
-                : 'No contracts yet. Add your first contract opportunity to get started.'}
+                : 'No active contracts yet. Add your first contract opportunity to get started.'}
             </p>
           </Card>
         )}

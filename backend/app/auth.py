@@ -115,3 +115,65 @@ def verify_reset_token(token: str, db: Session) -> Optional[User]:
     ).first()
 
     return user
+
+
+def generate_api_key() -> str:
+    """Generate a secure random API key"""
+    import secrets
+    # Generate a 32-byte (256-bit) random key and encode as hex
+    # Format: crm_<48 character hex string>
+    return f"crm_{secrets.token_hex(24)}"
+
+
+def get_user_from_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Get user from API key if the token is an API key"""
+    try:
+        token = credentials.credentials
+
+        # Check if this looks like an API key (starts with "crm_")
+        if token.startswith("crm_"):
+            user = db.query(User).filter(User.api_key == token).first()
+            if user and user.is_active:
+                return user
+
+        return None
+    except:
+        return None
+
+
+def get_current_user_or_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Get the current authenticated user (via JWT or API key)"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    token = credentials.credentials
+
+    # Try API key authentication first
+    if token.startswith("crm_"):
+        user = db.query(User).filter(User.api_key == token).first()
+        if user and user.is_active:
+            return user
+        raise credentials_exception
+
+    # Fall back to JWT authentication
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user

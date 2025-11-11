@@ -76,6 +76,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(String, nullable=False, default="user")  # "admin" or "user"
     is_active = Column(Boolean, nullable=False, default=True)
+    api_key = Column(String, unique=True, nullable=True, index=True)
     created_by = Column(String, ForeignKey("users.id"), nullable=True)
     password_reset_token = Column(String, nullable=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)

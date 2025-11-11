@@ -78,11 +78,6 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
-            <div className="mt-4 rounded-md bg-muted p-3 text-sm">
-              <p className="font-medium">Demo Credentials:</p>
-              <p className="text-muted-foreground">Email: demo@pretorin.com</p>
-              <p className="text-muted-foreground">Password: demo123</p>
-            </div>
           </form>
         </CardContent>
       </Card>

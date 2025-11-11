@@ -11,7 +11,8 @@ from app.schemas.schemas import (
 from app.auth import (
     get_current_active_user,
     get_current_admin_user,
-    get_password_hash
+    get_password_hash,
+    generate_api_key
 )
 from app.seed_data import generate_id
 
@@ -163,3 +164,51 @@ def delete_user(
     db.commit()
 
     return {"message": "User deleted successfully"}
+
+
+@router.post("/me/api-key/generate")
+def generate_user_api_key(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Generate or regenerate API key for current user"""
+    # Generate new API key
+    new_api_key = generate_api_key()
+
+    # Update user
+    current_user.api_key = new_api_key
+    db.commit()
+
+    return {
+        "api_key": new_api_key,
+        "message": "API key generated successfully. Store it securely - it won't be shown again."
+    }
+
+
+@router.delete("/me/api-key")
+def revoke_user_api_key(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Revoke API key for current user"""
+    if not current_user.api_key:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No API key found"
+        )
+
+    current_user.api_key = None
+    db.commit()
+
+    return {"message": "API key revoked successfully"}
+
+
+@router.get("/me/api-key/status")
+def get_api_key_status(
+    current_user: User = Depends(get_current_active_user)
+):
+    """Check if current user has an API key (doesn't return the actual key)"""
+    return {
+        "has_api_key": current_user.api_key is not None,
+        "api_key_prefix": current_user.api_key[:12] + "..." if current_user.api_key else None
+    }

@@ -14,6 +14,7 @@ from app.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_user,
     get_current_active_user,
+    get_current_user_or_api_key,
     create_password_reset_token,
     verify_reset_token
 )
@@ -77,8 +78,13 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserSchema)
-def get_me(current_user: User = Depends(get_current_active_user)):
+def get_me(current_user: User = Depends(get_current_user_or_api_key)):
     """Get current user information"""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account"
+        )
     return current_user
 
 
