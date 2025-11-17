@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import * as api from '@/lib/api';
 import { ArrowLeft, Edit, Trash2, Plus, Mail, Phone, Building, Calendar, Loader2, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -179,7 +180,7 @@ export default function ContactDetail() {
     }
   };
 
-  const handleToggleFollowUp = async () => {
+  const handleUpdateFollowUp = async (needsFollowUp: boolean, followUpDate?: string) => {
     if (!contact) return;
     try {
       const updated = await api.updateContact(contact.id, {
@@ -190,13 +191,15 @@ export default function ContactDetail() {
         organization: contact.organization,
         contact_type: contact.contact_type,
         status: contact.status,
-        needs_follow_up: !contact.needs_follow_up,
-        follow_up_date: contact.follow_up_date,
+        needs_follow_up: needsFollowUp,
+        follow_up_date: followUpDate,
         notes: contact.notes,
+        assigned_user_id: contact.assigned_user_id,
       });
       setContact(updated);
-      toast.success(contact.needs_follow_up ? 'Follow-up removed' : 'Flagged for follow-up');
+      toast.success('Follow-up updated successfully');
     } catch (error) {
+      console.error('Follow-up update error:', error);
       toast.error('Failed to update follow-up');
     }
   };
@@ -260,6 +263,45 @@ export default function ContactDetail() {
           </div>
         </div>
 
+        {/* Follow-up Panel */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Follow-up</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <Label htmlFor="needs-follow-up">Needs Follow-up</Label>
+                <p className="text-xs text-muted-foreground mt-1">Flag this contact for follow-up</p>
+              </div>
+              <Switch
+                id="needs-follow-up"
+                checked={contact.needs_follow_up}
+                onCheckedChange={(checked) => {
+                  handleUpdateFollowUp(checked, checked ? contact.follow_up_date : undefined);
+                }}
+              />
+            </div>
+            {contact.needs_follow_up && (
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="follow-up-date">Follow-up Date</Label>
+                <Input
+                  id="follow-up-date"
+                  type="date"
+                  value={contact.follow_up_date ? new Date(contact.follow_up_date).toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const value = e.target.value ? new Date(e.target.value).toISOString() : undefined;
+                    handleUpdateFollowUp(contact.needs_follow_up, value);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set a specific date to follow up with this contact
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
@@ -308,30 +350,6 @@ export default function ContactDetail() {
                   ))}
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Needs Follow-up</p>
-                  <p className="text-xs text-muted-foreground">Flag this contact for follow-up</p>
-                </div>
-                <Badge
-                  variant={contact.needs_follow_up ? 'destructive' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={handleToggleFollowUp}
-                >
-                  {contact.needs_follow_up ? 'Yes' : 'No'}
-                </Badge>
-              </div>
-              {contact.follow_up_date && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Follow-up Date</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(contact.follow_up_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              )}
               <div className="flex items-center gap-3">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -439,8 +457,8 @@ export default function ContactDetail() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="commercial">Commercial</SelectItem>
                   <SelectItem value="government">Government</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -479,20 +497,6 @@ export default function ContactDetail() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Assign this contact to a team member
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Follow-up Date</Label>
-              <Input
-                type="date"
-                value={editForm.follow_up_date ? new Date(editForm.follow_up_date).toISOString().split('T')[0] : ''}
-                onChange={(e) => {
-                  const value = e.target.value ? new Date(e.target.value).toISOString() : undefined;
-                  setEditForm({ ...editForm, follow_up_date: value });
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Set a specific date to follow up with this contact
               </p>
             </div>
             <div className="space-y-2">

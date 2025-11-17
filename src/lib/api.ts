@@ -124,7 +124,7 @@ export interface Contact {
   email: string;
   phone: string;
   organization: string;
-  contact_type: 'individual' | 'government' | 'other';
+  contact_type: 'individual' | 'commercial' | 'government';
   status: 'cold' | 'warm' | 'hot';
   needs_follow_up: boolean;
   follow_up_date?: string;
@@ -141,7 +141,7 @@ export interface ContactCreate {
   email: string;
   phone: string;
   organization: string;
-  contact_type: 'individual' | 'government' | 'other';
+  contact_type: 'individual' | 'commercial' | 'government';
   status: 'cold' | 'warm' | 'hot';
   needs_follow_up: boolean;
   follow_up_date?: string;
@@ -323,4 +323,31 @@ export async function changePassword(data: PasswordChange): Promise<{ message: s
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+// API Key Management
+export interface ApiKeyResponse {
+  api_key: string;
+  message: string;
+}
+
+export interface ApiKeyStatus {
+  has_api_key: boolean;
+  api_key_prefix: string | null;
+}
+
+export async function generateApiKey(): Promise<ApiKeyResponse> {
+  return fetchApi<ApiKeyResponse>('/users/me/api-key/generate', {
+    method: 'POST',
+  });
+}
+
+export async function revokeApiKey(): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>('/users/me/api-key', {
+    method: 'DELETE',
+  });
+}
+
+export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
+  return fetchApi<ApiKeyStatus>('/users/me/api-key/status');
 }

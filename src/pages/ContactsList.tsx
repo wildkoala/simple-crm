@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as api from '@/lib/api';
-import { Plus, Search, Mail, Phone, Loader2 } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Loader2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ContactsList() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,21 +32,41 @@ export default function ContactsList() {
     }
   };
 
-  const filteredContacts = contacts.filter((contact) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      contact.first_name.toLowerCase().includes(query) ||
-      contact.last_name.toLowerCase().includes(query) ||
-      contact.email.toLowerCase().includes(query) ||
-      contact.organization.toLowerCase().includes(query)
-    );
-  });
+  const filteredContacts = contacts
+    .filter((contact) => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        contact.first_name.toLowerCase().includes(query) ||
+        contact.last_name.toLowerCase().includes(query) ||
+        contact.email.toLowerCase().includes(query) ||
+        contact.organization.toLowerCase().includes(query);
+
+      const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Sort by follow_up_date (soonest first)
+      // Contacts with follow_up_date come first, then by date
+      // Contacts without follow_up_date come last
+      if (a.follow_up_date && b.follow_up_date) {
+        return new Date(a.follow_up_date).getTime() - new Date(b.follow_up_date).getTime();
+      }
+      if (a.follow_up_date && !b.follow_up_date) {
+        return -1; // a comes first
+      }
+      if (!a.follow_up_date && b.follow_up_date) {
+        return 1; // b comes first
+      }
+      // Both have no follow_up_date, sort by last name
+      return a.last_name.localeCompare(b.last_name);
+    });
 
   const getContactTypeBadge = (type: string) => {
     const variants = {
       individual: 'default',
       government: 'secondary',
-      other: 'outline',
+      commercial: 'outline',
     } as const;
     return variants[type as keyof typeof variants] || 'outline';
   };
@@ -76,15 +98,28 @@ export default function ContactsList() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search contacts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        {/* Search and Filter */}
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="hot">Hot</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+              <SelectItem value="cold">Cold</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Contacts Grid */}
@@ -120,7 +155,7 @@ export default function ContactsList() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-2">
                       <div className="flex gap-2">
                         <Badge variant={getContactTypeBadge(contact.contact_type)}>
                           {contact.contact_type}
@@ -129,6 +164,12 @@ export default function ContactsList() {
                           {contact.status}
                         </Badge>
                       </div>
+                      {contact.follow_up_date && (
+                        <div className="flex items-center gap-1 text-xs text-primary font-medium">
+                          <Calendar className="h-3 w-3" />
+                          Follow up: {new Date(contact.follow_up_date).toLocaleDateString()}
+                        </div>
+                      )}
                       {contact.last_contacted_at && (
                         <span className="text-xs text-muted-foreground">
                           Last: {new Date(contact.last_contacted_at).toLocaleDateString()}

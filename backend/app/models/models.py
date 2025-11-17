@@ -21,7 +21,7 @@ class Contact(Base):
     email = Column(String, nullable=False, index=True)
     phone = Column(String, nullable=False)
     organization = Column(String, nullable=False)
-    contact_type = Column(String, nullable=False)  # individual, government, other
+    contact_type = Column(String, nullable=False)  # individual, commercial, government
     status = Column(String, nullable=False)  # cold, warm, hot
     needs_follow_up = Column(Boolean, default=False)  # Deprecated - use follow_up_date instead
     follow_up_date = Column(DateTime, nullable=True)  # Target date to follow up

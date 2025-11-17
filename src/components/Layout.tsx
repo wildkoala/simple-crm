@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, LogOut, Shield } from 'lucide-react';
+import { Home, Users, FileText, LogOut, Shield, Key } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +11,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/contacts', label: 'Contacts', icon: Users },
     { path: '/contracts', label: 'Contracts', icon: FileText },
+    { path: '/api-settings', label: 'API', icon: Key },
   ];
 
   // Add admin-only nav items
@@ -23,9 +24,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">Pretorin CRM</h1>
-          </Link>
+          <a href="https://pretorin.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+            <img
+              src="/logo-gray-orange.png"
+              alt="Pretorin CRM"
+              className="h-8"
+            />
+          </a>
           <div className="flex items-center gap-4">
             {user && (
               <>

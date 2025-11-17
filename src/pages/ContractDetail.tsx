@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import * as api from '@/lib/api';
 import { ArrowLeft, Trash2, Save, ExternalLink, Loader2, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,7 +17,6 @@ export default function ContractDetail() {
   const navigate = useNavigate();
   const [contract, setContract] = useState<api.Contract | null>(null);
   const [editForm, setEditForm] = useState<api.Contract | null>(null);
-  const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -29,9 +27,6 @@ export default function ContractDetail() {
 
   const loadData = async () => {
     try {
-      const contactsData = await api.getContacts();
-      setContacts(contactsData);
-
       if (id === 'new') {
         const newContract = {
           id: '',
@@ -131,15 +126,6 @@ export default function ContractDetail() {
     }
   };
 
-  const toggleContactAssignment = (contactId: string) => {
-    if (!editForm) return;
-    const current = editForm.assigned_contact_ids;
-    const newIds = current.includes(contactId)
-      ? current.filter((id) => id !== contactId)
-      : [...current, contactId];
-    setEditForm({ ...editForm, assigned_contact_ids: newIds });
-  };
-
   if (isLoading) {
     return (
       <Layout>
@@ -154,8 +140,6 @@ export default function ContractDetail() {
 
   const displayContract = isEditing ? editForm : contract;
   if (!displayContract) return null;
-
-  const assignedContacts = contacts.filter((c) => displayContract.assigned_contact_ids.includes(c.id));
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -172,6 +156,32 @@ export default function ContractDetail() {
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     return deadlineDate <= sevenDaysFromNow && deadlineDate >= now;
+  };
+
+  const renderDescriptionWithLinks = (text: string) => {
+    if (!text) return 'No description';
+
+    // Simple URL regex that matches http(s) URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline inline-flex items-center gap-1"
+          >
+            {part}
+            <ExternalLink className="h-3 w-3 inline" />
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
   };
 
   return (
@@ -364,7 +374,7 @@ export default function ContractDetail() {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label className="text-muted-foreground">Description</Label>
-                    <p className="mt-1">{displayContract.description || 'No description'}</p>
+                    <p className="mt-1 break-words">{renderDescriptionWithLinks(displayContract.description)}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Source</Label>
@@ -395,56 +405,6 @@ export default function ContractDetail() {
                   </div>
                 )}
               </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Assigned Contacts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Assigned Contacts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isEditing ? (
-              // Edit Mode - Show Checkboxes
-              <div className="space-y-4">
-                {contacts.length > 0 ? (
-                  contacts.map((contact) => (
-                    <div key={contact.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={contact.id}
-                        checked={editForm!.assigned_contact_ids.includes(contact.id)}
-                        onCheckedChange={() => toggleContactAssignment(contact.id)}
-                      />
-                      <label
-                        htmlFor={contact.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {contact.first_name} {contact.last_name} ({contact.email})
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No contacts available</p>
-                )}
-              </div>
-            ) : (
-              // View Mode - Show Badges
-              <div>
-                {assignedContacts.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {assignedContacts.map((contact) => (
-                      <Link key={contact.id} to={`/contacts/${contact.id}`}>
-                        <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
-                          {contact.first_name} {contact.last_name}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No contacts assigned</p>
-                )}
-              </div>
             )}
           </CardContent>
         </Card>

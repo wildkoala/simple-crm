@@ -69,7 +69,7 @@ def get_seed_contacts(user_id):
             email="david.thompson@consultant.com",
             phone="(555) 456-7890",
             organization="Thompson Consulting",
-            contact_type="other",
+            contact_type="commercial",
             status="cold",
             needs_follow_up=False,
             notes="Independent consultant. Potential partner for government contracts.",

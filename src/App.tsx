@@ -14,6 +14,7 @@ import ContactDetail from "./pages/ContactDetail";
 import ContractsList from "./pages/ContractsList";
 import ContractDetail from "./pages/ContractDetail";
 import UserManagement from "./pages/UserManagement";
+import ApiSettings from "./pages/ApiSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/contracts" element={<ProtectedRoute><ContractsList /></ProtectedRoute>} />
             <Route path="/contracts/:id" element={<ProtectedRoute><ContractDetail /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+            <Route path="/api-settings" element={<ProtectedRoute><ApiSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
