@@ -24,13 +24,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <a href="https://pretorin.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-            <img
-              src="/logo-gray-orange.png"
-              alt="Pretorin CRM"
-              className="h-8"
-            />
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="https://pretorin.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <img
+                src="/logo-gray-orange.png"
+                alt="Pretorin"
+                className="h-8"
+              />
+            </a>
+            <div className="border-l border-border h-8"></div>
+            <h1 className="text-lg font-semibold">Simple CRM</h1>
+          </div>
           <div className="flex items-center gap-4">
             {user && (
               <>
