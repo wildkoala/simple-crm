@@ -1,5 +1,12 @@
 # Simple CRM
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-green.svg)
+![Node](https://img.shields.io/badge/node-18+-green.svg)
+![React](https://img.shields.io/badge/react-18-61dafb.svg)
+![TypeScript](https://img.shields.io/badge/typescript-5-3178c6.svg)
+![FastAPI](https://img.shields.io/badge/fastapi-latest-009688.svg)
+
 A lightweight CRM designed for startups in the govtech space. This tool provides essential functionality for tracking government contract opportunities and managing business contacts.
 
 ## About
