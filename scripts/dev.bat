@@ -8,6 +8,9 @@ echo Starting Simple CRM Development Environment
 echo ========================================
 echo.
 
+REM Get the project root (parent of scripts\)
+set "PROJECT_ROOT=%~dp0.."
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
@@ -26,7 +29,7 @@ if errorlevel 1 (
 
 REM Backend setup
 echo Setting up backend...
-cd backend
+cd "%PROJECT_ROOT%\backend"
 
 REM Create virtual environment if it doesn't exist
 if not exist "venv" (
@@ -53,12 +56,11 @@ if not exist ".env" (
 
 REM Start backend in background
 echo Starting backend server on http://localhost:8000...
-start /B python run.py > ..\backend.log 2>&1
-
-cd ..
+start /B python run.py > "%PROJECT_ROOT%\backend.log" 2>&1
 
 REM Frontend setup
 echo Setting up frontend...
+cd "%PROJECT_ROOT%\frontend"
 
 REM Install frontend dependencies if needed
 if not exist "node_modules" (
@@ -86,7 +88,7 @@ echo API Docs: http://localhost:8000/docs
 echo.
 echo Demo Login:
 echo   Email:    demo@pretorin.com
-echo   Password: demo123
+echo   Password: demo1234
 echo.
 echo Press Ctrl+C to stop all services
 echo ========================================

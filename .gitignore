@@ -11,9 +11,10 @@ lerna-debug.log*
 backend.log
 backend.pid
 
-node_modules
-dist
-dist-ssr
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
 *.local
 
 # Environment variables with secrets

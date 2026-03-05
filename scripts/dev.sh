@@ -5,6 +5,9 @@
 
 set -e
 
+# Get the project root (parent of scripts/)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 echo "🚀 Starting Simple CRM Development Environment"
 echo "=============================================="
 echo ""
@@ -13,7 +16,7 @@ echo ""
 check_port() {
     local port=$1
     local service_name=$2
-    
+
     # Try different methods to check if port is in use
     if command -v lsof &> /dev/null; then
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
@@ -33,7 +36,7 @@ check_port() {
             return 0  # Port is in use
         fi
     fi
-    
+
     return 1  # Port is not in use
 }
 
@@ -78,7 +81,7 @@ echo ""
 
 # Backend setup
 echo "📦 Setting up backend..."
-cd backend
+cd "$PROJECT_ROOT/backend"
 
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
@@ -105,14 +108,13 @@ fi
 
 # Start backend in background
 echo "🔧 Starting backend server on http://localhost:8000..."
-python run.py > ../backend.log 2>&1 &
+python run.py > "$PROJECT_ROOT/backend.log" 2>&1 &
 BACKEND_PID=$!
-echo $BACKEND_PID > ../backend.pid
-
-cd ..
+echo $BACKEND_PID > "$PROJECT_ROOT/backend.pid"
 
 # Frontend setup
 echo "📦 Setting up frontend..."
+cd "$PROJECT_ROOT/frontend"
 
 # Install frontend dependencies if needed
 if [ ! -d "node_modules" ]; then
@@ -141,7 +143,7 @@ echo "📍 API Docs: http://localhost:8000/docs"
 echo ""
 echo "👤 Demo Login:"
 echo "   Email:    demo@pretorin.com"
-echo "   Password: demo123"
+echo "   Password: demo1234"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo "=============================================="
@@ -151,9 +153,9 @@ echo ""
 cleanup() {
     echo ""
     echo "🛑 Stopping services..."
-    if [ -f backend.pid ]; then
-        kill $(cat backend.pid) 2>/dev/null || true
-        rm backend.pid
+    if [ -f "$PROJECT_ROOT/backend.pid" ]; then
+        kill $(cat "$PROJECT_ROOT/backend.pid") 2>/dev/null || true
+        rm "$PROJECT_ROOT/backend.pid"
     fi
     echo "✅ All services stopped"
     exit 0

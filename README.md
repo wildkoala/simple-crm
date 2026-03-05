@@ -54,14 +54,14 @@ The easiest way to run the application is using the included development script:
 ```sh
 git clone https://github.com/pretorin-ai/simple-crm.git
 cd simple-crm
-./dev.sh
+./scripts/dev.sh
 ```
 
 **Windows:**
 ```sh
 git clone https://github.com/pretorin-ai/simple-crm.git
 cd simple-crm
-dev.bat
+scripts\dev.bat
 ```
 
 The script will:
@@ -90,6 +90,7 @@ python run.py
 
 **2. In a new terminal, set up and run the frontend:**
 ```sh
+cd frontend
 npm install
 cp .env.local.example .env.local
 npm run dev
@@ -176,6 +177,8 @@ Once the backend is running, interactive API documentation is available at:
 
 ### Frontend Commands
 
+Run these from the `frontend/` directory:
+
 - `npm run dev` - Start development server with hot reload
 - `npm run build` - Build for production
 - `npm run build:dev` - Build in development mode
@@ -205,12 +208,18 @@ simple-crm/
 │   │   └── seed_data.py     # Example data seeder
 │   ├── run.py               # Application entry point
 │   └── requirements.txt     # Python dependencies
-├── src/
-│   ├── components/          # React components
-│   ├── contexts/            # React context providers
-│   ├── lib/                 # Utility functions and API client
-│   └── pages/               # Page components
-└── public/                  # Static assets
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── contexts/        # React context providers
+│   │   ├── lib/             # Utility functions and API client
+│   │   └── pages/           # Page components
+│   ├── public/              # Static assets
+│   ├── package.json         # Frontend dependencies
+│   └── vite.config.ts       # Vite configuration
+└── scripts/
+    ├── dev.sh               # Development launcher (Linux/Mac)
+    └── dev.bat              # Development launcher (Windows)
 ```
 
 ## Security Notes
