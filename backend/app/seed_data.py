@@ -1,16 +1,11 @@
 import logging
-import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.models.models import Contact, Communication, Contract, User
 from app.auth import get_password_hash
+from app.utils import generate_id
 
 logger = logging.getLogger(__name__)
-
-
-def generate_id():
-    """Generate a unique ID"""
-    return str(uuid.uuid4())
 
 
 def get_seed_contacts(user_id):

@@ -99,7 +99,7 @@ npm run dev
 
 The example database includes a demo user:
 - **Email**: demo@pretorin.com
-- **Password**: demo123
+- **Password**: demo1234
 
 **Important**: Change this password in production environments.
 

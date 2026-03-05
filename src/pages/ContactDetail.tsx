@@ -162,18 +162,7 @@ export default function ContactDetail() {
   const handleQuickStatusUpdate = async (status: api.Contact['status']) => {
     if (!contact) return;
     try {
-      const updated = await api.updateContact(contact.id, {
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        phone: contact.phone,
-        organization: contact.organization,
-        contact_type: contact.contact_type,
-        status,
-        needs_follow_up: contact.needs_follow_up,
-        follow_up_date: contact.follow_up_date,
-        notes: contact.notes,
-      });
+      const updated = await api.patchContact(contact.id, { status });
       setContact(updated);
       toast.success(`Status updated to ${status}`);
     } catch (error) {
@@ -184,18 +173,9 @@ export default function ContactDetail() {
   const handleUpdateFollowUp = async (needsFollowUp: boolean, followUpDate?: string) => {
     if (!contact) return;
     try {
-      const updated = await api.updateContact(contact.id, {
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        phone: contact.phone,
-        organization: contact.organization,
-        contact_type: contact.contact_type,
-        status: contact.status,
+      const updated = await api.patchContact(contact.id, {
         needs_follow_up: needsFollowUp,
         follow_up_date: followUpDate,
-        notes: contact.notes,
-        assigned_user_id: contact.assigned_user_id,
       });
       setContact(updated);
       toast.success('Follow-up updated successfully');

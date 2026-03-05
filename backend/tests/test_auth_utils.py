@@ -22,7 +22,8 @@ from app.auth import (
     verify_reset_token,
 )
 from app.models.models import User
-from app.seed_data import generate_id
+from app.auth import hash_token
+from app.utils import generate_id
 
 
 def test_get_password_hash():
@@ -107,11 +108,13 @@ def test_create_password_reset_token(db):
     token = create_password_reset_token(user, db)
     assert isinstance(token, str)
     db.refresh(user)
-    assert user.password_reset_token == token
+    # Token is now hashed before storage
+    assert user.password_reset_token == hash_token(token)
     assert user.password_reset_expires is not None
 
 
 def test_verify_reset_token_valid(db):
+    raw_token = "validtoken123"
     user = User(
         id=generate_id(),
         email="verify@test.com",
@@ -119,7 +122,7 @@ def test_verify_reset_token_valid(db):
         hashed_password=get_password_hash("password123"),
         role="user",
         is_active=True,
-        password_reset_token="validtoken123",
+        password_reset_token=hash_token(raw_token),
         password_reset_expires=datetime.now(timezone.utc) + timedelta(hours=24),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -127,12 +130,13 @@ def test_verify_reset_token_valid(db):
     db.add(user)
     db.commit()
 
-    result = verify_reset_token("validtoken123", db)
+    result = verify_reset_token(raw_token, db)
     assert result is not None
     assert result.email == "verify@test.com"
 
 
 def test_verify_reset_token_expired(db):
+    raw_token = "expiredtoken"
     user = User(
         id=generate_id(),
         email="expired@test.com",
@@ -140,7 +144,7 @@ def test_verify_reset_token_expired(db):
         hashed_password=get_password_hash("password123"),
         role="user",
         is_active=True,
-        password_reset_token="expiredtoken",
+        password_reset_token=hash_token(raw_token),
         password_reset_expires=datetime.now(timezone.utc) - timedelta(hours=1),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -148,7 +152,7 @@ def test_verify_reset_token_expired(db):
     db.add(user)
     db.commit()
 
-    result = verify_reset_token("expiredtoken", db)
+    result = verify_reset_token(raw_token, db)
     assert result is None
 
 

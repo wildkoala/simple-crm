@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import logging
 import os
+import secrets
 
 load_dotenv()
 
@@ -53,19 +54,24 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """Get the current authenticated user"""
+def hash_api_key(api_key: str) -> str:
+    """Hash an API key using HMAC-SHA256 for secure storage"""
+    return hmac.new(SECRET_KEY.encode(), api_key.encode(), hashlib.sha256).hexdigest()
+
+
+def hash_token(token: str) -> str:
+    """Hash a token (reset tokens, etc.) using HMAC-SHA256"""
+    return hmac.new(SECRET_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
+
+
+def _get_user_from_jwt(token: str, db: Session) -> User:
+    """Decode JWT token and return the associated user."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
     try:
-        token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
@@ -77,6 +83,14 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """Get the current authenticated user (JWT only)"""
+    return _get_user_from_jwt(credentials.credentials, db)
 
 
 def get_current_active_user(
@@ -105,16 +119,15 @@ def get_current_admin_user(
 
 def generate_password_reset_token() -> str:
     """Generate a secure random token for password reset"""
-    import secrets
     return secrets.token_urlsafe(32)
 
 
 def create_password_reset_token(user: User, db: Session) -> str:
-    """Create and store password reset token"""
+    """Create and store password reset token (hashed)"""
     token = generate_password_reset_token()
     expires = datetime.now(timezone.utc) + timedelta(hours=24)
 
-    user.password_reset_token = token
+    user.password_reset_token = hash_token(token)
     user.password_reset_expires = expires
     db.commit()
 
@@ -123,24 +136,17 @@ def create_password_reset_token(user: User, db: Session) -> str:
 
 def verify_reset_token(token: str, db: Session) -> Optional[User]:
     """Verify password reset token and return user if valid"""
+    token_hash = hash_token(token)
     user = db.query(User).filter(
-        User.password_reset_token == token,
+        User.password_reset_token == token_hash,
         User.password_reset_expires > datetime.now(timezone.utc)
     ).first()
 
     return user
 
 
-def hash_api_key(api_key: str) -> str:
-    """Hash an API key using HMAC-SHA256 for secure storage"""
-    return hmac.new(SECRET_KEY.encode(), api_key.encode(), hashlib.sha256).hexdigest()
-
-
 def generate_api_key() -> str:
     """Generate a secure random API key"""
-    import secrets
-    # Generate a 32-byte (256-bit) random key and encode as hex
-    # Format: crm_<48 character hex string>
     return f"crm_{secrets.token_hex(24)}"
 
 
@@ -151,14 +157,11 @@ def get_user_from_api_key(
     """Get user from API key if the token is an API key"""
     try:
         token = credentials.credentials
-
-        # Check if this looks like an API key (starts with "crm_")
         if token.startswith("crm_"):
             key_hash = hash_api_key(token)
             user = db.query(User).filter(User.api_key_hash == key_hash).first()
             if user and user.is_active:
                 return user
-
         return None
     except Exception:
         return None
@@ -186,18 +189,7 @@ def get_current_user_or_api_key(
         raise credentials_exception
 
     # Fall back to JWT authentication
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
+    return _get_user_from_jwt(token, db)
 
 
 def validate_password(password: str) -> None:

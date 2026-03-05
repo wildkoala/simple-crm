@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from app.auth import get_password_hash
 from app.models.models import User
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 
 def test_get_users(client, admin_headers, admin_user, regular_user):
@@ -118,7 +118,7 @@ def test_create_user_short_password(client, admin_headers):
         "password": "short",
         "role": "user",
     }, headers=admin_headers)
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_update_user(client, admin_headers, regular_user):

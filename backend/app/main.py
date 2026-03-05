@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,15 +24,18 @@ logger = logging.getLogger(__name__)
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
 
-# Seed database with initial data
-db = SessionLocal()
-try:
-    seed_database(db)
-finally:
-    db.close()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: create tables and seed database
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_database(db)
+    finally:
+        db.close()
+    yield
+
 
 app = FastAPI(
     title="Pretorin CRM API",
@@ -39,7 +43,8 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
@@ -58,7 +63,7 @@ async def favicon():
     return {"detail": "Not Found"}
 
 # Configure CORS
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8080")
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 allowed_origins = [frontend_url]
 extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "")
 if extra_origins:
@@ -71,10 +76,10 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Include routers
+# Include routers - specific paths before parameterized ones
 app.include_router(auth.router)
-app.include_router(contacts.router)
 app.include_router(contacts_followup.router)
+app.include_router(contacts.router)
 app.include_router(communications.router)
 app.include_router(contracts.router)
 app.include_router(users.router)

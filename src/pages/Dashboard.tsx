@@ -9,7 +9,6 @@ import { FileText, AlertCircle, Calendar, Loader2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [contracts, setContracts] = useState<api.Contract[]>([]);
   const [dueFollowUps, setDueFollowUps] = useState<api.Contact[]>([]);
   const [overdueFollowUps, setOverdueFollowUps] = useState<api.Contact[]>([]);
@@ -21,13 +20,11 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [contactsData, contractsData, dueData, overdueData] = await Promise.all([
-        api.getContacts(),
+      const [contractsData, dueData, overdueData] = await Promise.all([
         api.getContracts(),
         api.getDueFollowUps(7), // Follow-ups due within 7 days
         api.getOverdueFollowUps(),
       ]);
-      setContacts(contactsData);
       setContracts(contractsData);
       setDueFollowUps(dueData);
       setOverdueFollowUps(overdueData);
@@ -53,7 +50,7 @@ export default function Dashboard() {
       inProgressContracts: inProgressContracts.length,
       actionableContracts,
     };
-  }, [contacts, contracts, dueFollowUps, overdueFollowUps]);
+  }, [contracts, dueFollowUps, overdueFollowUps]);
 
   if (isLoading) {
     return (

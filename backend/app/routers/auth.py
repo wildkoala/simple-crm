@@ -22,7 +22,7 @@ from app.auth import (
     verify_reset_token,
     validate_password
 )
-from app.seed_data import generate_id
+from app.utils import generate_id
 from app.email import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["authentication"])

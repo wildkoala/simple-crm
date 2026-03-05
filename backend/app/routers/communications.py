@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.models import Communication, Contact, User
 from app.schemas.schemas import Communication as CommunicationSchema, CommunicationCreate
 from app.auth import get_current_user
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 router = APIRouter(prefix="/communications", tags=["communications"])
 
@@ -13,6 +13,8 @@ router = APIRouter(prefix="/communications", tags=["communications"])
 @router.get("", response_model=List[CommunicationSchema])
 def get_communications(
     contact_id: str = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -20,7 +22,7 @@ def get_communications(
     query = db.query(Communication).join(Contact).filter(Contact.assigned_user_id == current_user.id)
     if contact_id:
         query = query.filter(Communication.contact_id == contact_id)
-    return query.all()
+    return query.offset(skip).limit(limit).all()
 
 
 @router.get("/{communication_id}", response_model=CommunicationSchema)

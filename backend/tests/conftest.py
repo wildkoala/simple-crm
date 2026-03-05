@@ -9,7 +9,7 @@ from app.database import Base, get_db
 from app.main import app
 from app.models.models import User, Contact, Communication, Contract
 from app.auth import get_password_hash, create_access_token, hash_api_key, generate_api_key
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 # In-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite://"

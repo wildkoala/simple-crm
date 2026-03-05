@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -15,21 +14,12 @@ import { toast } from 'sonner';
 import { Shield, Users, Trash2, Edit } from 'lucide-react';
 
 export default function UserManagement() {
-  const { user: currentUser, isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-
-  // Redirect if not admin
-  useEffect(() => {
-    if (!isAdmin) {
-      toast.error('Admin access required');
-      navigate('/dashboard');
-    }
-  }, [isAdmin, navigate]);
 
   useEffect(() => {
     loadUsers();

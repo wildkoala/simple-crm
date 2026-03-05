@@ -171,6 +171,13 @@ export async function updateContact(id: string, contact: ContactCreate): Promise
   });
 }
 
+export async function patchContact(id: string, updates: Partial<ContactCreate>): Promise<Contact> {
+  return fetchApi<Contact>(`/contacts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+}
+
 export async function deleteContact(id: string): Promise<void> {
   return fetchApi<void>(`/contacts/${id}`, {
     method: 'DELETE',
@@ -213,6 +220,12 @@ export async function deleteCommunication(id: string): Promise<void> {
 }
 
 // Contracts API
+export interface ContactBrief {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 export interface Contract {
   id: string;
   title: string;
@@ -224,6 +237,7 @@ export interface Contract {
   notes: string;
   created_at: string;
   assigned_contact_ids: string[];
+  assigned_contacts: ContactBrief[];
 }
 
 export interface ContractCreate {
@@ -256,6 +270,13 @@ export async function updateContract(id: string, contract: ContractCreate): Prom
   return fetchApi<Contract>(`/contracts/${id}`, {
     method: 'PUT',
     body: JSON.stringify(contract),
+  });
+}
+
+export async function patchContract(id: string, updates: Partial<ContractCreate>): Promise<Contract> {
+  return fetchApi<Contract>(`/contracts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
   });
 }
 

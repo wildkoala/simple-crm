@@ -1,22 +1,33 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from app.database import get_db
 from app.models.models import Contact, User
-from app.schemas.schemas import Contact as ContactSchema, ContactCreate, ContactUpdate
+from app.schemas.schemas import (
+    Contact as ContactSchema,
+    ContactCreate,
+    ContactUpdate,
+    ContactPatch,
+)
 from app.auth import get_current_user
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
 @router.get("", response_model=List[ContactSchema])
 def get_contacts(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get all contacts for the current user"""
-    return db.query(Contact).filter(Contact.assigned_user_id == current_user.id).all()
+    return db.query(Contact).options(
+        joinedload(Contact.assigned_user)
+    ).filter(
+        Contact.assigned_user_id == current_user.id
+    ).offset(skip).limit(limit).all()
 
 
 @router.get("/{contact_id}", response_model=ContactSchema)
@@ -26,7 +37,9 @@ def get_contact(
     current_user: User = Depends(get_current_user)
 ):
     """Get a specific contact"""
-    contact = db.query(Contact).filter(
+    contact = db.query(Contact).options(
+        joinedload(Contact.assigned_user)
+    ).filter(
         Contact.id == contact_id,
         Contact.assigned_user_id == current_user.id
     ).first()
@@ -101,6 +114,33 @@ def update_contact(
     contact.assigned_user_id = contact_update.assigned_user_id
     if contact_update.last_contacted_at:
         contact.last_contacted_at = contact_update.last_contacted_at
+
+    db.commit()
+    db.refresh(contact)
+    return contact
+
+
+@router.patch("/{contact_id}", response_model=ContactSchema)
+def patch_contact(
+    contact_id: str,
+    updates: ContactPatch,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Partially update a contact"""
+    contact = db.query(Contact).filter(
+        Contact.id == contact_id,
+        Contact.assigned_user_id == current_user.id
+    ).first()
+    if not contact:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Contact not found"
+        )
+
+    update_data = updates.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(contact, field, value)
 
     db.commit()
     db.refresh(contact)

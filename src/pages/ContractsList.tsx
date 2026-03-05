@@ -14,7 +14,6 @@ export default function ContractsList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [contracts, setContracts] = useState<api.Contract[]>([]);
-  const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,12 +22,8 @@ export default function ContractsList() {
 
   const loadData = async () => {
     try {
-      const [contractsData, contactsData] = await Promise.all([
-        api.getContracts(),
-        api.getContacts(),
-      ]);
+      const contractsData = await api.getContracts();
       setContracts(contractsData);
-      setContacts(contactsData);
     } catch (error) {
       toast.error('Failed to load contracts');
       console.error(error);
@@ -149,14 +144,11 @@ export default function ContractsList() {
                           <AlertCircle className="h-4 w-4 text-primary" />
                         )}
                       </div>
-                      {contract.assigned_contact_ids.length > 0 && (
+                      {contract.assigned_contacts && contract.assigned_contacts.length > 0 && (
                         <div>
                           Assigned to:{' '}
-                          {contract.assigned_contact_ids
-                            .map((id) => {
-                              const contact = contacts.find((c) => c.id === id);
-                              return contact ? `${contact.first_name} ${contact.last_name}` : 'Unknown';
-                            })
+                          {contract.assigned_contacts
+                            .map((c) => `${c.first_name} ${c.last_name}`)
                             .join(', ')}
                         </div>
                       )}

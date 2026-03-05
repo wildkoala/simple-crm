@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import smtplib
@@ -14,7 +15,7 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@pretorin.com")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Pretorin CRM")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8080")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 async def send_email(
@@ -23,7 +24,7 @@ async def send_email(
     html_content: str,
     text_content: Optional[str] = None
 ):
-    """Send email using SMTP"""
+    """Send email using SMTP (non-blocking)"""
 
     # Skip if SMTP not configured (development mode)
     if not SMTP_USERNAME or not SMTP_PASSWORD:
@@ -43,12 +44,14 @@ async def send_email(
     html_part = MIMEText(html_content, 'html')
     msg.attach(html_part)
 
-    # Send email
-    try:
+    def _send_sync():
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
+
+    try:
+        await asyncio.to_thread(_send_sync)
     except Exception as e:
         logger.error("Failed to send email: %s", e)
         raise

@@ -5,7 +5,7 @@ from unittest.mock import patch, AsyncMock
 
 from app.auth import get_password_hash, create_password_reset_token
 from app.models.models import User
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 
 def test_login_success(client, admin_user):
@@ -82,8 +82,7 @@ def test_register_short_password(client, admin_headers):
         "name": "Short Pass",
         "password": "short",
     }, headers=admin_headers)
-    assert response.status_code == 400
-    assert "8 characters" in response.json()["detail"]
+    assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_register_no_auth(client):
@@ -200,7 +199,7 @@ def test_password_reset_short_password(client, db, admin_user):
         "token": token,
         "new_password": "short",
     })
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_password_change_success(client, admin_headers, admin_user):
@@ -226,7 +225,7 @@ def test_password_change_short_new_password(client, admin_headers):
         "current_password": "adminpass123",
         "new_password": "short",
     }, headers=admin_headers)
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_password_change_no_auth(client):

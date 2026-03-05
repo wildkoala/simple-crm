@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.auth import get_password_hash
 from app.models.models import Contact
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 
 def test_get_due_follow_ups_empty(client, admin_headers, admin_user):

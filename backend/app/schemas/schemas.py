@@ -1,29 +1,53 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Literal
 from datetime import datetime
 
 
 # Contact schemas
 class ContactBase(BaseModel):
-    first_name: str
-    last_name: str
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    phone: str
-    organization: str
+    phone: str = Field(max_length=50)
+    organization: str = Field(max_length=200)
     contact_type: Literal['individual', 'commercial', 'government']
     status: Literal['cold', 'warm', 'hot']
     needs_follow_up: bool = False
     follow_up_date: Optional[datetime] = None
-    notes: str = ""
+    notes: str = Field(default="", max_length=10000)
 
 
 class ContactCreate(ContactBase):
-    assigned_user_id: Optional[str] = None  # Optional - will default to current user if not provided
+    assigned_user_id: Optional[str] = None
 
 
 class ContactUpdate(ContactBase):
     last_contacted_at: Optional[datetime] = None
     assigned_user_id: str
+
+
+class ContactPatch(BaseModel):
+    first_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    last_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=50)
+    organization: Optional[str] = Field(default=None, max_length=200)
+    contact_type: Optional[Literal['individual', 'commercial', 'government']] = None
+    status: Optional[Literal['cold', 'warm', 'hot']] = None
+    needs_follow_up: Optional[bool] = None
+    follow_up_date: Optional[datetime] = None
+    notes: Optional[str] = Field(default=None, max_length=10000)
+    last_contacted_at: Optional[datetime] = None
+    assigned_user_id: Optional[str] = None
+
+
+class ContactBrief(BaseModel):
+    id: str
+    first_name: str
+    last_name: str
+
+    class Config:
+        from_attributes = True
 
 
 class Contact(ContactBase):
@@ -42,7 +66,7 @@ class CommunicationBase(BaseModel):
     contact_id: str
     date: datetime
     type: Literal['email', 'phone', 'meeting', 'other']
-    notes: str = ""
+    notes: str = Field(default="", max_length=10000)
 
 
 class CommunicationCreate(CommunicationBase):
@@ -59,13 +83,13 @@ class Communication(CommunicationBase):
 
 # Contract schemas
 class ContractBase(BaseModel):
-    title: str
-    description: str = ""
-    source: str
+    title: str = Field(min_length=1, max_length=300)
+    description: str = Field(default="", max_length=50000)
+    source: str = Field(max_length=200)
     deadline: datetime
     status: Literal['prospective', 'in progress', 'submitted', 'not a good fit']
-    submission_link: Optional[str] = None
-    notes: str = ""
+    submission_link: Optional[str] = Field(default=None, max_length=2048)
+    notes: str = Field(default="", max_length=10000)
 
 
 class ContractCreate(ContractBase):
@@ -76,11 +100,23 @@ class ContractUpdate(ContractBase):
     assigned_contact_ids: List[str] = []
 
 
+class ContractPatch(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    description: Optional[str] = Field(default=None, max_length=50000)
+    source: Optional[str] = Field(default=None, max_length=200)
+    deadline: Optional[datetime] = None
+    status: Optional[Literal['prospective', 'in progress', 'submitted', 'not a good fit']] = None
+    submission_link: Optional[str] = Field(default=None, max_length=2048)
+    notes: Optional[str] = Field(default=None, max_length=10000)
+    assigned_contact_ids: Optional[List[str]] = None
+
+
 class Contract(ContractBase):
     id: str
     created_at: datetime
     created_by_user_id: Optional[str] = None
     assigned_contact_ids: List[str] = []
+    assigned_contacts: List[ContactBrief] = []
 
     class Config:
         from_attributes = True
@@ -95,17 +131,17 @@ class SAMGovPointOfContact(BaseModel):
 
 
 class SAMGovOpportunity(BaseModel):
-    noticeId: str
-    title: str
-    solicitationNumber: Optional[str] = None
-    description: Optional[str] = None
+    noticeId: str = Field(max_length=255)
+    title: str = Field(max_length=300)
+    solicitationNumber: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=50000)
     responseDeadLine: Optional[str] = None
     postedDate: Optional[str] = None
-    naicsCode: Optional[str] = None
-    uiLink: Optional[str] = None
+    naicsCode: Optional[str] = Field(default=None, max_length=20)
+    uiLink: Optional[str] = Field(default=None, max_length=2048)
     pointOfContact: Optional[List[SAMGovPointOfContact]] = None
     source: str = "SAM.gov"
-    notes: Optional[str] = ""
+    notes: Optional[str] = Field(default="", max_length=10000)
 
 
 class SAMGovImportRequest(BaseModel):
@@ -123,20 +159,20 @@ class SAMGovImportResponse(BaseModel):
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr
-    name: str
+    name: str = Field(min_length=1, max_length=150)
 
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserCreateByAdmin(UserBase):
-    password: str
+    password: str = Field(min_length=8, max_length=128)
     role: Literal['admin', 'user'] = "user"
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=150)
     email: Optional[EmailStr] = None
     role: Optional[Literal['admin', 'user']] = None
     is_active: Optional[bool] = None
@@ -160,12 +196,12 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordReset(BaseModel):
     token: str
-    new_password: str
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class PasswordChange(BaseModel):
     current_password: str
-    new_password: str
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 # Auth schemas

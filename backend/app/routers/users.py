@@ -16,7 +16,7 @@ from app.auth import (
     hash_api_key,
     validate_password
 )
-from app.seed_data import generate_id
+from app.utils import generate_id
 
 router = APIRouter(prefix="/users", tags=["users"])
 

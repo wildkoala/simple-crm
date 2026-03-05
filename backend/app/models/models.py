@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Index, String, DateTime, ForeignKey, Table
+from sqlalchemy import Boolean, Column, String, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.database import Base
@@ -7,28 +7,28 @@ from app.database import Base
 contract_contacts = Table(
     'contract_contacts',
     Base.metadata,
-    Column('contract_id', String, ForeignKey('contracts.id', ondelete='CASCADE')),
-    Column('contact_id', String, ForeignKey('contacts.id', ondelete='CASCADE'))
+    Column('contract_id', String(36), ForeignKey('contracts.id', ondelete='CASCADE')),
+    Column('contact_id', String(36), ForeignKey('contacts.id', ondelete='CASCADE'))
 )
 
 
 class Contact(Base):
     __tablename__ = "contacts"
 
-    id = Column(String, primary_key=True, index=True)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    email = Column(String, nullable=False, index=True)
-    phone = Column(String, nullable=False)
-    organization = Column(String, nullable=False)
-    contact_type = Column(String, nullable=False)  # individual, commercial, government
-    status = Column(String, nullable=False, index=True)  # cold, warm, hot
+    id = Column(String(36), primary_key=True, index=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    phone = Column(String(50), nullable=False)
+    organization = Column(String(200), nullable=False)
+    contact_type = Column(String(20), nullable=False)  # individual, commercial, government
+    status = Column(String(20), nullable=False, index=True)  # cold, warm, hot
     needs_follow_up = Column(Boolean, default=False)
     follow_up_date = Column(DateTime, nullable=True)
-    notes = Column(String, default="")
+    notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_contacted_at = Column(DateTime, nullable=True)
-    assigned_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    assigned_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
     # Relationships
     communications = relationship("Communication", back_populates="contact", cascade="all, delete-orphan")
@@ -39,11 +39,11 @@ class Contact(Base):
 class Communication(Base):
     __tablename__ = "communications"
 
-    id = Column(String, primary_key=True, index=True)
-    contact_id = Column(String, ForeignKey("contacts.id"), nullable=False, index=True)
+    id = Column(String(36), primary_key=True, index=True)
+    contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=False, index=True)
     date = Column(DateTime, nullable=False)
-    type = Column(String, nullable=False, index=True)  # email, phone, meeting, other
-    notes = Column(String, default="")
+    type = Column(String(20), nullable=False, index=True)  # email, phone, meeting, other
+    notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
@@ -53,17 +53,17 @@ class Communication(Base):
 class Contract(Base):
     __tablename__ = "contracts"
 
-    id = Column(String, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, default="")
-    source = Column(String, nullable=False)
+    id = Column(String(36), primary_key=True, index=True)
+    title = Column(String(300), nullable=False)
+    description = Column(String(50000), default="")
+    source = Column(String(200), nullable=False)
     deadline = Column(DateTime, nullable=False)
-    status = Column(String, nullable=False, index=True)  # prospective, in progress, submitted, not a good fit
-    sam_gov_notice_id = Column(String, nullable=True, unique=True, index=True)
-    submission_link = Column(String, nullable=True)
-    notes = Column(String, default="")
+    status = Column(String(20), nullable=False, index=True)  # prospective, in progress, submitted, not a good fit
+    sam_gov_notice_id = Column(String(255), nullable=True, unique=True, index=True)
+    submission_link = Column(String(2048), nullable=True)
+    notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    created_by_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
 
     # Relationships
     assigned_contacts = relationship("Contact", secondary=contract_contacts, back_populates="contracts")
@@ -77,16 +77,16 @@ class Contract(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True, index=True)
-    email = Column(String, unique=True, nullable=False, index=True)
-    name = Column(String, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="user")  # "admin" or "user"
+    id = Column(String(36), primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(150), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False, default="user")  # "admin" or "user"
     is_active = Column(Boolean, nullable=False, default=True)
-    api_key_hash = Column(String, unique=True, nullable=True, index=True)
-    api_key_prefix = Column(String, nullable=True)
-    created_by = Column(String, ForeignKey("users.id"), nullable=True)
-    password_reset_token = Column(String, nullable=True, index=True)
+    api_key_hash = Column(String(255), unique=True, nullable=True, index=True)
+    api_key_prefix = Column(String(20), nullable=True)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
+    password_reset_token = Column(String(255), nullable=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
