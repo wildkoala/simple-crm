@@ -157,6 +157,22 @@ class SAMGovImportResponse(BaseModel):
     errors: List[str] = []
 
 
+# SAM.gov collection schemas (direct API scraping)
+class SAMGovCollectRequest(BaseModel):
+    naics_codes: List[str] = Field(min_length=1, max_length=50)
+    days_back: int = Field(default=1, ge=1, le=90)
+    solicitations_only: bool = True
+    auto_create_contacts: bool = True
+
+
+class SAMGovCollectResponse(BaseModel):
+    opportunities_fetched: int
+    contracts_created: int
+    contracts_skipped: int
+    contacts_created: int
+    errors: List[str] = []
+
+
 # User schemas
 class UserBase(BaseModel):
     email: EmailStr

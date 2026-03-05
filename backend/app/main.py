@@ -17,6 +17,7 @@ from app.routers import (
     contacts,
     contacts_followup,
     contracts,
+    sam_gov,
     users,
 )
 from app.seed_data import seed_database
@@ -92,6 +93,7 @@ app.include_router(contacts_followup.router)
 app.include_router(contacts.router)
 app.include_router(communications.router)
 app.include_router(contracts.router)
+app.include_router(sam_gov.router)
 app.include_router(users.router)
 
 
