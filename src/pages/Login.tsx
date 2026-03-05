@@ -17,15 +17,12 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log('Login attempt with:', email);
 
     try {
       await login({ email, password });
-      console.log('Login successful');
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to login');
     } finally {
       setIsLoading(false);

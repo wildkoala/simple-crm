@@ -20,16 +20,7 @@ def get_communications(
     query = db.query(Communication).join(Contact).filter(Contact.assigned_user_id == current_user.id)
     if contact_id:
         query = query.filter(Communication.contact_id == contact_id)
-
-    communications = query.all()
-    return [
-        {
-            **comm.__dict__,
-            "contact_id": comm.contact_id,
-            "created_at": comm.created_at
-        }
-        for comm in communications
-    ]
+    return query.all()
 
 
 @router.get("/{communication_id}", response_model=CommunicationSchema)
@@ -48,12 +39,7 @@ def get_communication(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Communication not found"
         )
-
-    return {
-        **communication.__dict__,
-        "contact_id": communication.contact_id,
-        "created_at": communication.created_at
-    }
+    return communication
 
 
 @router.post("", response_model=CommunicationSchema, status_code=status.HTTP_201_CREATED)
@@ -89,12 +75,7 @@ def create_communication(
 
     db.commit()
     db.refresh(new_communication)
-
-    return {
-        **new_communication.__dict__,
-        "contact_id": new_communication.contact_id,
-        "created_at": new_communication.created_at
-    }
+    return new_communication
 
 
 @router.delete("/{communication_id}", status_code=status.HTTP_204_NO_CONTENT)

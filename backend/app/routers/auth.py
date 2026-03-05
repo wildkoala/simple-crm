@@ -101,12 +101,14 @@ def get_me(current_user: User = Depends(get_current_user_or_api_key)):
 
 
 @router.post("/password-reset-request")
+@limiter.limit("3/minute")
 async def request_password_reset(
-    request: PasswordResetRequest,
+    request: Request,
+    body: PasswordResetRequest,
     db: Session = Depends(get_db)
 ):
     """Request password reset - always returns success to prevent email enumeration"""
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.email == body.email).first()
 
     if user and user.is_active:
         token = create_password_reset_token(user, db)
@@ -118,7 +120,9 @@ async def request_password_reset(
 
 
 @router.post("/password-reset")
+@limiter.limit("5/minute")
 def reset_password(
+    request: Request,
     reset: PasswordReset,
     db: Session = Depends(get_db)
 ):

@@ -64,13 +64,6 @@ def create_user(
             detail="Email already registered"
         )
 
-    # Validate role
-    if user_create.role not in ["admin", "user"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid role. Must be 'admin' or 'user'"
-        )
-
     # Create user
     new_user = User(
         id=generate_id(),
@@ -122,11 +115,6 @@ def update_user(
         user.email = user_update.email
 
     if user_update.role is not None:
-        if user_update.role not in ["admin", "user"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid role"
-            )
         user.role = user_update.role
 
     if user_update.is_active is not None:

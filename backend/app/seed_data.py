@@ -209,12 +209,12 @@ def get_seed_contracts(contacts):
 
 
 def get_seed_user():
-    """Return seed user (default credentials: demo@pretorin.com / demo123)"""
+    """Return seed user (default credentials: demo@pretorin.com / demo1234)"""
     return User(
         id=generate_id(),
         email="demo@pretorin.com",
         name="Demo Admin User",
-        hashed_password=get_password_hash("demo123"),
+        hashed_password=get_password_hash("demo1234"),
         role="admin",
         is_active=True,
         created_at=datetime.now(timezone.utc)
@@ -255,7 +255,7 @@ def seed_database(db):
     db.commit()
     logger.info("Database seeded successfully!")
     logger.warning(
-        "Demo admin account seeded: %s / demo123. "
+        "Demo admin account seeded: %s / demo1234. "
         "Change this password immediately in any non-development environment!",
         user.email,
     )

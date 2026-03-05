@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from app.database import get_db
 from app.models.models import User
 import hashlib
+import hmac
 import logging
 import os
 
@@ -131,8 +132,8 @@ def verify_reset_token(token: str, db: Session) -> Optional[User]:
 
 
 def hash_api_key(api_key: str) -> str:
-    """Hash an API key using SHA256 for secure storage"""
-    return hashlib.sha256(api_key.encode()).hexdigest()
+    """Hash an API key using HMAC-SHA256 for secure storage"""
+    return hmac.new(SECRET_KEY.encode(), api_key.encode(), hashlib.sha256).hexdigest()
 
 
 def generate_api_key() -> str:

@@ -23,16 +23,7 @@ def get_contracts(
     current_user: User = Depends(get_current_user_or_api_key)
 ):
     """Get all contracts - contracts are shared across all users"""
-    contracts = db.query(Contract).all()
-    return [
-        {
-            **contract.__dict__,
-            "submission_link": contract.submission_link,
-            "created_at": contract.created_at,
-            "assigned_contact_ids": [contact.id for contact in contract.assigned_contacts]
-        }
-        for contract in contracts
-    ]
+    return db.query(Contract).all()
 
 
 @router.get("/{contract_id}", response_model=ContractSchema)
@@ -41,20 +32,14 @@ def get_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get a specific contract - contracts are shared across all users"""
+    """Get a specific contract"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Contract not found"
         )
-
-    return {
-        **contract.__dict__,
-        "submission_link": contract.submission_link,
-        "created_at": contract.created_at,
-        "assigned_contact_ids": [contact.id for contact in contract.assigned_contacts]
-    }
+    return contract
 
 
 @router.post("", response_model=ContractSchema, status_code=status.HTTP_201_CREATED)
@@ -72,10 +57,11 @@ def create_contract(
         deadline=contract.deadline,
         status=contract.status,
         submission_link=contract.submission_link,
-        notes=contract.notes
+        notes=contract.notes,
+        created_by_user_id=current_user.id
     )
 
-    # Add assigned contacts - can assign any contacts
+    # Add assigned contacts
     if contract.assigned_contact_ids:
         contacts = db.query(Contact).filter(
             Contact.id.in_(contract.assigned_contact_ids)
@@ -85,13 +71,7 @@ def create_contract(
     db.add(new_contract)
     db.commit()
     db.refresh(new_contract)
-
-    return {
-        **new_contract.__dict__,
-        "submission_link": new_contract.submission_link,
-        "created_at": new_contract.created_at,
-        "assigned_contact_ids": [contact.id for contact in new_contract.assigned_contacts]
-    }
+    return new_contract
 
 
 @router.put("/{contract_id}", response_model=ContractSchema)
@@ -101,12 +81,21 @@ def update_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Update a contract - contracts are shared across all users"""
+    """Update a contract - only creator or admin can modify"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Contract not found"
+        )
+
+    # Check authorization: creator or admin
+    if (contract.created_by_user_id
+            and contract.created_by_user_id != current_user.id
+            and current_user.role != "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this contract"
         )
 
     # Update fields
@@ -118,7 +107,7 @@ def update_contract(
     contract.submission_link = contract_update.submission_link
     contract.notes = contract_update.notes
 
-    # Update assigned contacts - can assign any contacts
+    # Update assigned contacts
     if contract_update.assigned_contact_ids is not None:
         contacts = db.query(Contact).filter(
             Contact.id.in_(contract_update.assigned_contact_ids)
@@ -127,13 +116,7 @@ def update_contract(
 
     db.commit()
     db.refresh(contract)
-
-    return {
-        **contract.__dict__,
-        "submission_link": contract.submission_link,
-        "created_at": contract.created_at,
-        "assigned_contact_ids": [contact.id for contact in contract.assigned_contacts]
-    }
+    return contract
 
 
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -142,12 +125,21 @@ def delete_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a contract - contracts are shared across all users"""
+    """Delete a contract - only creator or admin can delete"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Contract not found"
+        )
+
+    # Check authorization: creator or admin
+    if (contract.created_by_user_id
+            and contract.created_by_user_id != current_user.id
+            and current_user.role != "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this contract"
         )
 
     db.delete(contract)
@@ -191,11 +183,10 @@ def import_samgov_opportunities(
             if opp.responseDeadLine:
                 try:
                     deadline = datetime.fromisoformat(opp.responseDeadLine.replace('Z', '+00:00'))
-                except:
-                    # Try alternate format
+                except ValueError:
                     try:
                         deadline = datetime.strptime(opp.responseDeadLine[:10], "%Y-%m-%d")
-                    except:
+                    except ValueError:
                         errors.append(f"Could not parse deadline for {opp.title}")
                         continue
 
@@ -251,14 +242,15 @@ def import_samgov_opportunities(
             # Create contract
             new_contract = Contract(
                 id=generate_id(),
-                title=opp.title[:200],  # Truncate if too long
+                title=opp.title[:200],
                 description=opp.description or "",
                 source=opp.source,
                 deadline=deadline,
-                status="prospective",  # Default to prospective
+                status="prospective",
                 sam_gov_notice_id=opp.noticeId,
                 submission_link=opp.uiLink,
-                notes="\n".join(notes_parts)
+                notes="\n".join(notes_parts),
+                created_by_user_id=current_user.id
             )
 
             # Assign contacts

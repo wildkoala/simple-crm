@@ -108,8 +108,7 @@ def test_create_user_invalid_role(client, admin_headers):
         "password": "password12345",
         "role": "superadmin",
     }, headers=admin_headers)
-    assert response.status_code == 400
-    assert "Invalid role" in response.json()["detail"]
+    assert response.status_code == 422  # Pydantic Literal validation
 
 
 def test_create_user_short_password(client, admin_headers):
@@ -158,7 +157,7 @@ def test_update_user_invalid_role(client, admin_headers, regular_user):
     response = client.put(f"/users/{regular_user.id}", json={
         "role": "superuser",
     }, headers=admin_headers)
-    assert response.status_code == 400
+    assert response.status_code == 422  # Pydantic Literal validation
 
 
 def test_update_user_is_active(client, admin_headers, regular_user):

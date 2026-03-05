@@ -27,8 +27,7 @@ async def send_email(
 
     # Skip if SMTP not configured (development mode)
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        logger.info("[EMAIL] Would send to %s: %s", to_email, subject)
-        logger.debug("[EMAIL] Content: %s", text_content or html_content)
+        logger.info("[EMAIL] SMTP not configured. Would send email with subject: %s", subject)
         return
 
     msg = MIMEMultipart('alternative')

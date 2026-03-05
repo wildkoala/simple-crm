@@ -59,9 +59,13 @@ async def favicon():
 
 # Configure CORS
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8080")
+allowed_origins = [frontend_url]
+extra_origins = os.getenv("EXTRA_CORS_ORIGINS", "")
+if extra_origins:
+    allowed_origins.extend(o.strip() for o in extra_origins.split(",") if o.strip())
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:5173"],  # Vite default port as fallback
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],

@@ -20,25 +20,11 @@ def get_due_follow_ups(
     today = datetime.now(timezone.utc).date()
     future_date = today + timedelta(days=days_ahead)
 
-    contacts = db.query(Contact).filter(
+    return db.query(Contact).filter(
         Contact.assigned_user_id == current_user.id,
         Contact.follow_up_date.isnot(None),
         Contact.follow_up_date <= datetime.combine(future_date, datetime.min.time())
     ).order_by(Contact.follow_up_date.asc()).all()
-
-    return [
-        {
-            **contact.__dict__,
-            "first_name": contact.first_name,
-            "last_name": contact.last_name,
-            "contact_type": contact.contact_type,
-            "needs_follow_up": contact.needs_follow_up,
-            "follow_up_date": contact.follow_up_date,
-            "created_at": contact.created_at,
-            "last_contacted_at": contact.last_contacted_at
-        }
-        for contact in contacts
-    ]
 
 
 @router.get("/follow-ups/overdue", response_model=List[ContactSchema])
@@ -49,22 +35,8 @@ def get_overdue_follow_ups(
     """Get contacts with overdue follow-ups for the current user"""
     today = datetime.now(timezone.utc).date()
 
-    contacts = db.query(Contact).filter(
+    return db.query(Contact).filter(
         Contact.assigned_user_id == current_user.id,
         Contact.follow_up_date.isnot(None),
         Contact.follow_up_date < datetime.combine(today, datetime.min.time())
     ).order_by(Contact.follow_up_date.asc()).all()
-
-    return [
-        {
-            **contact.__dict__,
-            "first_name": contact.first_name,
-            "last_name": contact.last_name,
-            "contact_type": contact.contact_type,
-            "needs_follow_up": contact.needs_follow_up,
-            "follow_up_date": contact.follow_up_date,
-            "created_at": contact.created_at,
-            "last_contacted_at": contact.last_contacted_at
-        }
-        for contact in contacts
-    ]

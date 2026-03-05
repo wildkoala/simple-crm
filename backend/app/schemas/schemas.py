@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 
@@ -10,8 +10,8 @@ class ContactBase(BaseModel):
     email: EmailStr
     phone: str
     organization: str
-    contact_type: str
-    status: str
+    contact_type: Literal['individual', 'commercial', 'government']
+    status: Literal['cold', 'warm', 'hot']
     needs_follow_up: bool = False
     follow_up_date: Optional[datetime] = None
     notes: str = ""
@@ -41,7 +41,7 @@ class Contact(ContactBase):
 class CommunicationBase(BaseModel):
     contact_id: str
     date: datetime
-    type: str
+    type: Literal['email', 'phone', 'meeting', 'other']
     notes: str = ""
 
 
@@ -63,7 +63,7 @@ class ContractBase(BaseModel):
     description: str = ""
     source: str
     deadline: datetime
-    status: str
+    status: Literal['prospective', 'in progress', 'submitted', 'not a good fit']
     submission_link: Optional[str] = None
     notes: str = ""
 
@@ -79,6 +79,7 @@ class ContractUpdate(ContractBase):
 class Contract(ContractBase):
     id: str
     created_at: datetime
+    created_by_user_id: Optional[str] = None
     assigned_contact_ids: List[str] = []
 
     class Config:
@@ -131,13 +132,13 @@ class UserCreate(UserBase):
 
 class UserCreateByAdmin(UserBase):
     password: str
-    role: str = "user"
+    role: Literal['admin', 'user'] = "user"
 
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-    role: Optional[str] = None
+    role: Optional[Literal['admin', 'user']] = None
     is_active: Optional[bool] = None
 
 

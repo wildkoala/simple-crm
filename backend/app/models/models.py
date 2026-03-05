@@ -7,8 +7,8 @@ from app.database import Base
 contract_contacts = Table(
     'contract_contacts',
     Base.metadata,
-    Column('contract_id', String, ForeignKey('contracts.id')),
-    Column('contact_id', String, ForeignKey('contacts.id'))
+    Column('contract_id', String, ForeignKey('contracts.id', ondelete='CASCADE')),
+    Column('contact_id', String, ForeignKey('contacts.id', ondelete='CASCADE'))
 )
 
 
@@ -22,9 +22,9 @@ class Contact(Base):
     phone = Column(String, nullable=False)
     organization = Column(String, nullable=False)
     contact_type = Column(String, nullable=False)  # individual, commercial, government
-    status = Column(String, nullable=False)  # cold, warm, hot
-    needs_follow_up = Column(Boolean, default=False)  # Deprecated - use follow_up_date instead
-    follow_up_date = Column(DateTime, nullable=True)  # Target date to follow up
+    status = Column(String, nullable=False, index=True)  # cold, warm, hot
+    needs_follow_up = Column(Boolean, default=False)
+    follow_up_date = Column(DateTime, nullable=True)
     notes = Column(String, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_contacted_at = Column(DateTime, nullable=True)
@@ -42,7 +42,7 @@ class Communication(Base):
     id = Column(String, primary_key=True, index=True)
     contact_id = Column(String, ForeignKey("contacts.id"), nullable=False, index=True)
     date = Column(DateTime, nullable=False)
-    type = Column(String, nullable=False)  # email, phone, meeting, other
+    type = Column(String, nullable=False, index=True)  # email, phone, meeting, other
     notes = Column(String, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -63,9 +63,15 @@ class Contract(Base):
     submission_link = Column(String, nullable=True)
     notes = Column(String, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_by_user_id = Column(String, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     assigned_contacts = relationship("Contact", secondary=contract_contacts, back_populates="contracts")
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
+
+    @property
+    def assigned_contact_ids(self):
+        return [c.id for c in self.assigned_contacts]
 
 
 class User(Base):
@@ -87,4 +93,3 @@ class User(Base):
 
     # Relationships
     assigned_contacts = relationship("Contact", back_populates="assigned_user")
-    created_users = relationship("User", remote_side=[id])

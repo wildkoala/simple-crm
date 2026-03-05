@@ -60,8 +60,10 @@ def test_create_access_token_default_expiry():
 def test_hash_api_key():
     key = "crm_abc123"
     result = hash_api_key(key)
-    expected = hashlib.sha256(key.encode()).hexdigest()
-    assert result == expected
+    # HMAC-SHA256 should produce deterministic output
+    assert len(result) == 64  # SHA256 hex digest length
+    assert hash_api_key(key) == result  # Same input, same output
+    assert hash_api_key("crm_different") != result  # Different input, different output
 
 
 def test_generate_api_key():
