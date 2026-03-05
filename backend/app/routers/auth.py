@@ -1,5 +1,7 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User
@@ -14,18 +16,22 @@ from app.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_user,
     get_current_active_user,
+    get_current_admin_user,
     get_current_user_or_api_key,
     create_password_reset_token,
-    verify_reset_token
+    verify_reset_token,
+    validate_password
 )
 from app.seed_data import generate_id
 from app.email import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/login", response_model=Token)
-def login(login_request: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, login_request: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token"""
     user = db.query(User).filter(User.email == login_request.email).first()
 
@@ -52,8 +58,14 @@ def login(login_request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=UserSchema)
-def register(user_create: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user"""
+def register(
+    user_create: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Register a new user (admin only)"""
+    validate_password(user_create.password)
+
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_create.email).first()
     if existing_user:
@@ -119,6 +131,8 @@ def reset_password(
             detail="Invalid or expired reset token"
         )
 
+    validate_password(reset.new_password)
+
     # Update password
     user.hashed_password = get_password_hash(reset.new_password)
     user.password_reset_token = None
@@ -141,6 +155,8 @@ def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect current password"
         )
+
+    validate_password(password_change.new_password)
 
     # Update password
     current_user.hashed_password = get_password_hash(password_change.new_password)

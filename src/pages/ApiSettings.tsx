@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,8 @@ export default function ApiSettings() {
   const [isRevoking, setIsRevoking] = useState(false);
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   useEffect(() => {
     loadApiKeyStatus();
@@ -34,11 +37,14 @@ export default function ApiSettings() {
 
   const handleGenerateApiKey = async () => {
     if (apiKeyStatus?.has_api_key) {
-      if (!confirm('This will replace your existing API key. Any applications using the old key will stop working. Continue?')) {
-        return;
-      }
+      setShowRegenerateConfirm(true);
+      return;
     }
+    await doGenerateApiKey();
+  };
 
+  const doGenerateApiKey = async () => {
+    setShowRegenerateConfirm(false);
     setIsGenerating(true);
     try {
       const response = await generateApiKey();
@@ -54,10 +60,7 @@ export default function ApiSettings() {
   };
 
   const handleRevokeApiKey = async () => {
-    if (!confirm('Are you sure you want to revoke your API key? Any applications using it will stop working immediately.')) {
-      return;
-    }
-
+    setShowRevokeConfirm(false);
     setIsRevoking(true);
     try {
       await revokeApiKey();
@@ -187,7 +190,7 @@ export default function ApiSettings() {
                 </Button>
                 {apiKeyStatus?.has_api_key && (
                   <Button
-                    onClick={handleRevokeApiKey}
+                    onClick={() => setShowRevokeConfirm(true)}
                     disabled={isRevoking}
                     variant="destructive"
                   >
@@ -339,6 +342,25 @@ export default function ApiSettings() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={showRegenerateConfirm}
+        onOpenChange={setShowRegenerateConfirm}
+        onConfirm={doGenerateApiKey}
+        title="Regenerate API Key"
+        description="This will replace your existing API key. Any applications using the old key will stop working."
+        confirmLabel="Regenerate"
+        variant="default"
+      />
+
+      <ConfirmDialog
+        open={showRevokeConfirm}
+        onOpenChange={setShowRevokeConfirm}
+        onConfirm={handleRevokeApiKey}
+        title="Revoke API Key"
+        description="Are you sure you want to revoke your API key? Any applications using it will stop working immediately."
+        confirmLabel="Revoke"
+      />
     </Layout>
   );
 }

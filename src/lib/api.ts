@@ -42,7 +42,7 @@ async function fetchApi<T>(
   if (!response.ok) {
     if (response.status === 401) {
       clearAuthToken();
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     const error: ApiError = await response.json();
     throw new Error(error.detail || 'An error occurred');

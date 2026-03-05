@@ -7,9 +7,8 @@ env/
 venv/
 ENV/
 .venv
-# Exclude all database files except example data
+# Exclude all database files
 *.db
-!crm.db
 *.sqlite
 *.sqlite3
 

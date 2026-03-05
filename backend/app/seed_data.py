@@ -1,7 +1,11 @@
-from datetime import datetime, timedelta
+import logging
+import uuid
+from datetime import datetime, timedelta, timezone
+
 from app.models.models import Contact, Communication, Contract, User
 from app.auth import get_password_hash
-import uuid
+
+logger = logging.getLogger(__name__)
 
 
 def generate_id():
@@ -11,7 +15,7 @@ def generate_id():
 
 def get_seed_contacts(user_id):
     """Return seed data for contacts"""
-    base_date = datetime.utcnow()
+    base_date = datetime.now(timezone.utc)
 
     return [
         Contact(
@@ -98,7 +102,7 @@ def get_seed_contacts(user_id):
 
 def get_seed_communications(contacts):
     """Return seed data for communications"""
-    base_date = datetime.utcnow()
+    base_date = datetime.now(timezone.utc)
 
     # Assuming first contact is Sarah Johnson
     sarah_id = contacts[0].id if contacts else generate_id()
@@ -143,7 +147,7 @@ def get_seed_communications(contacts):
 
 def get_seed_contracts(contacts):
     """Return seed data for contracts"""
-    base_date = datetime.utcnow()
+    base_date = datetime.now(timezone.utc)
 
     sarah_id = contacts[0].id if contacts else generate_id()
     emily_id = contacts[2].id if len(contacts) > 2 else generate_id()
@@ -213,7 +217,7 @@ def get_seed_user():
         hashed_password=get_password_hash("demo123"),
         role="admin",
         is_active=True,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
 
 
@@ -222,10 +226,10 @@ def seed_database(db):
     # Check if data already exists
     existing_user = db.query(User).first()
     if existing_user:
-        print("Database already seeded. Skipping...")
+        logger.info("Database already seeded. Skipping...")
         return
 
-    print("Seeding database...")
+    logger.info("Seeding database...")
 
     # Add user
     user = get_seed_user()
@@ -249,5 +253,9 @@ def seed_database(db):
         db.add(contract)
 
     db.commit()
-    print("Database seeded successfully!")
-    print(f"Default user: {user.email} / demo123")
+    logger.info("Database seeded successfully!")
+    logger.warning(
+        "Demo admin account seeded: %s / demo123. "
+        "Change this password immediately in any non-development environment!",
+        user.email,
+    )

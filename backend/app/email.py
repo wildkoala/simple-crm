@@ -1,8 +1,11 @@
+import logging
 import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # Email configuration from environment
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -24,8 +27,8 @@ async def send_email(
 
     # Skip if SMTP not configured (development mode)
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        print(f"[EMAIL] Would send to {to_email}: {subject}")
-        print(f"[EMAIL] Content: {text_content or html_content}")
+        logger.info("[EMAIL] Would send to %s: %s", to_email, subject)
+        logger.debug("[EMAIL] Content: %s", text_content or html_content)
         return
 
     msg = MIMEMultipart('alternative')
@@ -48,7 +51,7 @@ async def send_email(
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logger.error("Failed to send email: %s", e)
         raise
 
 

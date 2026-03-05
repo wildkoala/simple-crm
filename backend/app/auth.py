@@ -1,15 +1,28 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 from app.database import get_db
 from app.models.models import User
+import hashlib
+import logging
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Set it in backend/.env or as an environment variable. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
@@ -31,9 +44,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -98,7 +111,7 @@ def generate_password_reset_token() -> str:
 def create_password_reset_token(user: User, db: Session) -> str:
     """Create and store password reset token"""
     token = generate_password_reset_token()
-    expires = datetime.utcnow() + timedelta(hours=24)
+    expires = datetime.now(timezone.utc) + timedelta(hours=24)
 
     user.password_reset_token = token
     user.password_reset_expires = expires
@@ -111,10 +124,15 @@ def verify_reset_token(token: str, db: Session) -> Optional[User]:
     """Verify password reset token and return user if valid"""
     user = db.query(User).filter(
         User.password_reset_token == token,
-        User.password_reset_expires > datetime.utcnow()
+        User.password_reset_expires > datetime.now(timezone.utc)
     ).first()
 
     return user
+
+
+def hash_api_key(api_key: str) -> str:
+    """Hash an API key using SHA256 for secure storage"""
+    return hashlib.sha256(api_key.encode()).hexdigest()
 
 
 def generate_api_key() -> str:
@@ -135,12 +153,13 @@ def get_user_from_api_key(
 
         # Check if this looks like an API key (starts with "crm_")
         if token.startswith("crm_"):
-            user = db.query(User).filter(User.api_key == token).first()
+            key_hash = hash_api_key(token)
+            user = db.query(User).filter(User.api_key_hash == key_hash).first()
             if user and user.is_active:
                 return user
 
         return None
-    except:
+    except Exception:
         return None
 
 
@@ -159,7 +178,8 @@ def get_current_user_or_api_key(
 
     # Try API key authentication first
     if token.startswith("crm_"):
-        user = db.query(User).filter(User.api_key == token).first()
+        key_hash = hash_api_key(token)
+        user = db.query(User).filter(User.api_key_hash == key_hash).first()
         if user and user.is_active:
             return user
         raise credentials_exception
@@ -177,3 +197,12 @@ def get_current_user_or_api_key(
     if user is None:
         raise credentials_exception
     return user
+
+
+def validate_password(password: str) -> None:
+    """Validate password meets minimum requirements. Raises HTTPException if invalid."""
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )

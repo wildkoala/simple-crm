@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Layout } from '@/components/Layout';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -19,6 +21,7 @@ export default function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -75,12 +78,12 @@ export default function UserManagement() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
     try {
-      await deleteUser(userId);
+      await deleteUser(deleteUserId);
       toast.success('User deleted successfully');
+      setDeleteUserId(null);
       loadUsers();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete user');
@@ -88,10 +91,15 @@ export default function UserManagement() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">Loading...</div>
+      </Layout>
+    );
   }
 
   return (
+    <Layout>
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -123,7 +131,7 @@ export default function UserManagement() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required minLength={6} />
+                <Input id="password" name="password" type="password" required minLength={8} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
@@ -181,7 +189,7 @@ export default function UserManagement() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteUser(user.id)}
+                    onClick={() => setDeleteUserId(user.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -260,6 +268,16 @@ export default function UserManagement() {
           </DialogContent>
         </Dialog>
       )}
+
+      <ConfirmDialog
+        open={!!deleteUserId}
+        onOpenChange={(open) => { if (!open) setDeleteUserId(null); }}
+        onConfirm={handleDeleteUser}
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        confirmLabel="Delete"
+      />
     </div>
+    </Layout>
   );
 }

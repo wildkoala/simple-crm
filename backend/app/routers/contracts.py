@@ -177,9 +177,9 @@ def import_samgov_opportunities(
 
     for opp in import_request.opportunities:
         try:
-            # Check if contract already exists by noticeId (stored in notes)
+            # Check if contract already exists by noticeId
             existing_contract = db.query(Contract).filter(
-                Contract.notes.contains(f"SAM.gov Notice ID: {opp.noticeId}")
+                Contract.sam_gov_notice_id == opp.noticeId
             ).first()
 
             if existing_contract:
@@ -256,6 +256,7 @@ def import_samgov_opportunities(
                 source=opp.source,
                 deadline=deadline,
                 status="prospective",  # Default to prospective
+                sam_gov_notice_id=opp.noticeId,
                 submission_link=opp.uiLink,
                 notes="\n".join(notes_parts)
             )

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ export default function ContractDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -112,10 +114,7 @@ export default function ContractDetail() {
   };
 
   const handleDelete = async () => {
-    if (!contract || !confirm('Are you sure you want to delete this contract opportunity?')) {
-      return;
-    }
-
+    if (!contract) return;
     try {
       await api.deleteContract(contract.id);
       toast.success('Contract deleted successfully');
@@ -229,7 +228,7 @@ export default function ContractDetail() {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
-                <Button variant="destructive" onClick={handleDelete}>
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </Button>
@@ -409,6 +408,14 @@ export default function ContractDetail() {
           </CardContent>
         </Card>
       </div>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleDelete}
+        title="Delete Contract"
+        description="Are you sure you want to delete this contract opportunity? This action cannot be undone."
+        confirmLabel="Delete"
+      />
     </Layout>
   );
 }

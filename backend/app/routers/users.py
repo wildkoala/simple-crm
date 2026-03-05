@@ -12,7 +12,9 @@ from app.auth import (
     get_current_active_user,
     get_current_admin_user,
     get_password_hash,
-    generate_api_key
+    generate_api_key,
+    hash_api_key,
+    validate_password
 )
 from app.seed_data import generate_id
 
@@ -52,6 +54,8 @@ def create_user(
     current_user: User = Depends(get_current_admin_user)
 ):
     """Create new user - admin only"""
+    validate_password(user_create.password)
+
     # Check if email already exists
     existing_user = db.query(User).filter(User.email == user_create.email).first()
     if existing_user:
@@ -175,8 +179,9 @@ def generate_user_api_key(
     # Generate new API key
     new_api_key = generate_api_key()
 
-    # Update user
-    current_user.api_key = new_api_key
+    # Store only the hash and a prefix for display
+    current_user.api_key_hash = hash_api_key(new_api_key)
+    current_user.api_key_prefix = new_api_key[:12] + "..."
     db.commit()
 
     return {
@@ -191,13 +196,14 @@ def revoke_user_api_key(
     current_user: User = Depends(get_current_active_user)
 ):
     """Revoke API key for current user"""
-    if not current_user.api_key:
+    if not current_user.api_key_hash:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No API key found"
         )
 
-    current_user.api_key = None
+    current_user.api_key_hash = None
+    current_user.api_key_prefix = None
     db.commit()
 
     return {"message": "API key revoked successfully"}
@@ -209,6 +215,6 @@ def get_api_key_status(
 ):
     """Check if current user has an API key (doesn't return the actual key)"""
     return {
-        "has_api_key": current_user.api_key is not None,
-        "api_key_prefix": current_user.api_key[:12] + "..." if current_user.api_key else None
+        "has_api_key": current_user.api_key_hash is not None,
+        "api_key_prefix": current_user.api_key_prefix
     }

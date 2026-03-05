@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import * as api from '@/lib/api';
-import { ArrowLeft, Edit, Trash2, Plus, Mail, Phone, Building, Calendar, Loader2, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Mail, Phone, Building, Loader2, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,6 +27,7 @@ export default function ContactDetail() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCommDialogOpen, setIsCommDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<api.ContactCreate>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commForm, setCommForm] = useState({
     type: 'email' as api.CommunicationCreate['type'],
     date: new Date().toISOString(),
@@ -118,14 +120,13 @@ export default function ContactDetail() {
   };
 
   const handleDelete = async () => {
-    if (contact && confirm('Are you sure you want to delete this contact?')) {
-      try {
-        await api.deleteContact(contact.id);
-        toast.success('Contact deleted successfully');
-        navigate('/contacts');
-      } catch (error) {
-        toast.error('Failed to delete contact');
-      }
+    if (!contact) return;
+    try {
+      await api.deleteContact(contact.id);
+      toast.success('Contact deleted successfully');
+      navigate('/contacts');
+    } catch (error) {
+      toast.error('Failed to delete contact');
     }
   };
 
@@ -256,7 +257,7 @@ export default function ContactDetail() {
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
@@ -516,6 +517,15 @@ export default function ContactDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={handleDelete}
+        title="Delete Contact"
+        description="Are you sure you want to delete this contact? This action cannot be undone and will also remove all associated communications."
+        confirmLabel="Delete"
+      />
 
       {/* Communication Dialog */}
       <Dialog open={isCommDialogOpen} onOpenChange={setIsCommDialogOpen}>
