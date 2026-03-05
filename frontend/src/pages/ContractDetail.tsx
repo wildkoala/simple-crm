@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import * as api from '@/lib/api';
+import { getContractStatusBadge } from '@/lib/badges';
 import { ArrowLeft, Trash2, Save, ExternalLink, Loader2, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -140,16 +141,6 @@ export default function ContractDetail() {
   const displayContract = isEditing ? editForm : contract;
   if (!displayContract) return null;
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      prospective: 'outline',
-      'in progress': 'default',
-      submitted: 'secondary',
-      'not a good fit': 'destructive',
-    } as const;
-    return variants[status as keyof typeof variants] || 'outline';
-  };
-
   const isDeadlineNear = () => {
     const deadlineDate = new Date(displayContract.deadline);
     const now = new Date();
@@ -263,7 +254,7 @@ export default function ContractDetail() {
             <div className="flex items-center justify-between">
               <CardTitle>Contract Information</CardTitle>
               {!isEditing && (
-                <Badge variant={getStatusBadge(displayContract.status)}>
+                <Badge variant={getContractStatusBadge(displayContract.status)}>
                   {displayContract.status}
                 </Badge>
               )}

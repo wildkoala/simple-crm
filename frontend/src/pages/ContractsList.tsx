@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as api from '@/lib/api';
+import { getContractStatusBadge } from '@/lib/badges';
 import { Plus, Search, Calendar, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,16 +52,6 @@ export default function ContractsList() {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      prospective: 'outline',
-      'in progress': 'default',
-      submitted: 'secondary',
-      'not a good fit': 'destructive',
-    } as const;
-    return variants[status as keyof typeof variants] || 'outline';
-  };
 
   const isDeadlineNear = (deadline: string) => {
     const deadlineDate = new Date(deadline);
@@ -131,7 +122,7 @@ export default function ContractsList() {
                           {contract.description}
                         </p>
                       </div>
-                      <Badge variant={getStatusBadge(contract.status)}>
+                      <Badge variant={getContractStatusBadge(contract.status)}>
                         {contract.status}
                       </Badge>
                     </div>

@@ -8,18 +8,18 @@ version = "1.0.0"
 description = "API for managing sales contacts and government contract opportunities"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.115.0",
-    "uvicorn[standard]==0.32.0",
-    "sqlalchemy==2.0.35",
-    "python-jose[cryptography]==3.3.0",
-    "passlib==1.7.4",
-    "bcrypt==4.0.1",
-    "python-multipart==0.0.12",
-    "pydantic==2.9.2",
-    "pydantic-settings==2.6.0",
-    "email-validator==2.3.0",
-    "slowapi==0.1.9",
-    "python-dotenv==1.0.1",
+    "fastapi~=0.115.0",
+    "uvicorn[standard]~=0.32.0",
+    "sqlalchemy~=2.0.35",
+    "python-jose[cryptography]~=3.3.0",
+    "passlib~=1.7.4",
+    "bcrypt~=4.0.1",
+    "python-multipart~=0.0.12",
+    "pydantic~=2.9.2",
+    "pydantic-settings~=2.6.0",
+    "email-validator~=2.3.0",
+    "slowapi~=0.1.9",
+    "python-dotenv~=1.0.1",
     "requests>=2.31.0",
 ]
 

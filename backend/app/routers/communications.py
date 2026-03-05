@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_active_user
 from app.database import get_db
 from app.models.models import Communication, Contact, User
 from app.schemas.schemas import (
@@ -23,7 +23,7 @@ def get_communications(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get all communications for the current user's contacts, optionally filtered by contact_id"""
     query = (
@@ -38,7 +38,7 @@ def get_communications(
 def get_communication(
     communication_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific communication"""
     communication = (
@@ -59,7 +59,7 @@ def get_communication(
 def create_communication(
     communication: CommunicationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Create a new communication"""
     # Verify contact exists and belongs to current user
@@ -96,7 +96,7 @@ def create_communication(
 def delete_communication(
     communication_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Delete a communication"""
     communication = (

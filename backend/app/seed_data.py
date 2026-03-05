@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 from app.auth import get_password_hash
@@ -230,7 +231,12 @@ def get_seed_user():
 
 
 def seed_database(db):
-    """Seed the database with initial data"""
+    """Seed the database with initial data (development only)"""
+    env = os.getenv("ENV", "development")
+    if env != "development":
+        logger.info("Skipping database seeding in %s environment", env)
+        return
+
     # Check if data already exists
     existing_user = db.query(User).first()
     if existing_user:

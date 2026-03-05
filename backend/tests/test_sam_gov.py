@@ -403,18 +403,19 @@ class TestSAMGovCollectEndpoint:
 
     def test_import_exception_captured_in_errors(self):
         """An exception during individual opportunity import is captured, not raised."""
-        from app.routers.sam_gov import _import_opportunities
+        from app.services.import_service import import_opportunities
 
         mock_db = MagicMock()
         mock_savepoint = MagicMock()
         mock_savepoint.commit.side_effect = Exception("db boom")
         mock_db.begin_nested.return_value = mock_savepoint
+        mock_db.query.return_value.filter.return_value.all.return_value = []
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         mock_user = MagicMock()
         mock_user.id = "user-123"
 
-        result = _import_opportunities(
+        result = import_opportunities(
             opportunities=[
                 {
                     "noticeId": "EXCEPT-001",
@@ -427,17 +428,18 @@ class TestSAMGovCollectEndpoint:
             db=mock_db,
         )
 
-        assert result.contracts_created == 0
-        assert any("db boom" in e for e in result.errors)
+        assert result["contracts_created"] == 0
+        assert any("db boom" in e for e in result["errors"])
 
     def test_commit_failure_returns_500(self):
         """If the final commit fails, a 500 error is returned."""
         from fastapi import HTTPException
 
-        from app.routers.sam_gov import _import_opportunities
+        from app.services.import_service import import_opportunities
 
         mock_db = MagicMock()
         mock_db.begin_nested.return_value = MagicMock()
+        mock_db.query.return_value.filter.return_value.all.return_value = []
         mock_db.query.return_value.filter.return_value.first.return_value = None
         mock_db.commit.side_effect = Exception("commit failed")
 
@@ -445,7 +447,7 @@ class TestSAMGovCollectEndpoint:
         mock_user.id = "user-123"
 
         with pytest.raises(HTTPException) as exc_info:
-            _import_opportunities(
+            import_opportunities(
                 opportunities=[
                     {
                         "noticeId": "FAIL-001",

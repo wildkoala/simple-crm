@@ -84,6 +84,10 @@ def _get_user_from_jwt(token: str, db: Session) -> User:
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account"
+        )
     return user
 
 
@@ -96,8 +100,8 @@ def get_current_user(
 
 
 def get_current_active_user(current_user: User = Depends(get_current_user)):
-    """Ensure user is active"""
-    if not current_user.is_active:
+    """Ensure user is active (defense-in-depth; get_current_user already checks)"""
+    if not current_user.is_active:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account")
     return current_user
 

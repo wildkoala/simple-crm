@@ -26,9 +26,14 @@ class Contact(Base):
     contact_type = Column(String(20), nullable=False)  # individual, commercial, government
     status = Column(String(20), nullable=False, index=True)  # cold, warm, hot
     needs_follow_up = Column(Boolean, default=False)
-    follow_up_date = Column(DateTime, nullable=True)
+    follow_up_date = Column(DateTime, nullable=True, index=True)
     notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
     last_contacted_at = Column(DateTime, nullable=True)
     assigned_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
@@ -47,10 +52,15 @@ class Communication(Base):
 
     id = Column(String(36), primary_key=True, index=True)
     contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=False, index=True)
-    date = Column(DateTime, nullable=False)
+    date = Column(DateTime, nullable=False, index=True)
     type = Column(String(20), nullable=False, index=True)  # email, phone, meeting, other
     notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     # Relationships
     contact = relationship("Contact", back_populates="communications")
@@ -71,6 +81,11 @@ class Contract(Base):
     submission_link = Column(String(2048), nullable=True)
     notes = Column(String(10000), default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
     created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
 
     # Relationships

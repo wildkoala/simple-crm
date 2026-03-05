@@ -1,6 +1,7 @@
 // API client for backend communication
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const REQUEST_TIMEOUT_MS = 30000;
 
 export interface ApiError {
   detail: string;
@@ -34,26 +35,40 @@ async function fetchApi<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearAuthToken();
-      window.dispatchEvent(new Event('auth:unauthorized'));
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAuthToken();
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+      let errorMessage = 'An error occurred';
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // Response body wasn't valid JSON
+      }
+      throw new Error(errorMessage);
     }
-    const error: ApiError = await response.json();
-    throw new Error(error.detail || 'An error occurred');
-  }
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return null as T;
-  }
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return undefined as unknown as T;
+    }
 
-  return response.json();
+    return response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // Auth API
@@ -202,7 +217,11 @@ export interface CommunicationCreate {
 }
 
 export async function getCommunications(contactId?: string): Promise<Communication[]> {
-  const query = contactId ? `?contact_id=${contactId}` : '';
+  const params = new URLSearchParams();
+  if (contactId) {
+    params.set('contact_id', contactId);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
   return fetchApi<Communication[]>(`/communications${query}`);
 }
 
@@ -288,7 +307,8 @@ export async function deleteContract(id: string): Promise<void> {
 
 // Follow-up specific endpoints
 export async function getDueFollowUps(daysAhead: number = 7): Promise<Contact[]> {
-  return fetchApi<Contact[]>(`/contacts/follow-ups/due?days_ahead=${daysAhead}`);
+  const params = new URLSearchParams({ days_ahead: String(daysAhead) });
+  return fetchApi<Contact[]>(`/contacts/follow-ups/due?${params.toString()}`);
 }
 
 export async function getOverdueFollowUps(): Promise<Contact[]> {

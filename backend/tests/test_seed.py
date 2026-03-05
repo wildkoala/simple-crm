@@ -1,5 +1,7 @@
 """Tests for seed data module."""
 
+from unittest.mock import patch
+
 from app.seed_data import (
     generate_id,
     get_seed_communications,
@@ -63,6 +65,7 @@ def test_get_seed_contracts_empty_contacts():
     assert contracts[0].assigned_contacts == []
 
 
+@patch.dict("os.environ", {"ENV": "development"})
 def test_seed_database_fresh(db):
     seed_database(db)
     from app.models.models import Communication, Contact, Contract, User
@@ -73,6 +76,7 @@ def test_seed_database_fresh(db):
     assert db.query(Contract).count() == 4
 
 
+@patch.dict("os.environ", {"ENV": "development"})
 def test_seed_database_already_seeded(db):
     """Seeding twice should not duplicate data."""
     seed_database(db)
@@ -80,3 +84,12 @@ def test_seed_database_already_seeded(db):
     from app.models.models import User
 
     assert db.query(User).count() == 1
+
+
+@patch.dict("os.environ", {"ENV": "production"})
+def test_seed_database_skipped_in_production(db):
+    """Seeding should be skipped in non-development environments."""
+    seed_database(db)
+    from app.models.models import User
+
+    assert db.query(User).count() == 0

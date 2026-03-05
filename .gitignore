@@ -20,6 +20,11 @@ frontend/dist-ssr
 # Environment variables with secrets
 .env
 .env.local
+backend/.env
+
+# Coverage artifacts
+.coverage
+backend/.coverage
 
 # Editor directories and files
 .vscode/*

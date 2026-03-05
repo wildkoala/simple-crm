@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth import get_current_user
+from app.auth import get_current_active_user
 from app.database import get_db
 from app.models.models import Contact, User
 from app.schemas.schemas import (
@@ -24,7 +24,7 @@ def get_contacts(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get all contacts for the current user"""
     return (
@@ -41,7 +41,7 @@ def get_contacts(
 def get_contact(
     contact_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific contact"""
     contact = (
@@ -59,7 +59,7 @@ def get_contact(
 def create_contact(
     contact: ContactCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Create a new contact"""
     # Use provided assigned_user_id or default to current user
@@ -91,7 +91,7 @@ def update_contact(
     contact_id: str,
     contact_update: ContactUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Update a contact"""
     contact = (
@@ -127,7 +127,7 @@ def patch_contact(
     contact_id: str,
     updates: ContactPatch,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Partially update a contact"""
     contact = (
@@ -151,7 +151,7 @@ def patch_contact(
 def delete_contact(
     contact_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Delete a contact"""
     contact = (

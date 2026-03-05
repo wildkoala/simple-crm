@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as api from '@/lib/api';
+import { getContactStatusBadge, getContactTypeBadge } from '@/lib/badges';
 import { Plus, Search, Mail, Phone, Loader2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,53 +33,34 @@ export default function ContactsList() {
     }
   };
 
-  const filteredContacts = contacts
-    .filter((contact) => {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        contact.first_name.toLowerCase().includes(query) ||
-        contact.last_name.toLowerCase().includes(query) ||
-        contact.email.toLowerCase().includes(query) ||
-        contact.organization.toLowerCase().includes(query);
+  const filteredContacts = useMemo(() =>
+    contacts
+      .filter((contact) => {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          contact.first_name.toLowerCase().includes(query) ||
+          contact.last_name.toLowerCase().includes(query) ||
+          contact.email.toLowerCase().includes(query) ||
+          contact.organization.toLowerCase().includes(query);
 
-      const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
 
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      // Sort by follow_up_date (soonest first)
-      // Contacts with follow_up_date come first, then by date
-      // Contacts without follow_up_date come last
-      if (a.follow_up_date && b.follow_up_date) {
-        return new Date(a.follow_up_date).getTime() - new Date(b.follow_up_date).getTime();
-      }
-      if (a.follow_up_date && !b.follow_up_date) {
-        return -1; // a comes first
-      }
-      if (!a.follow_up_date && b.follow_up_date) {
-        return 1; // b comes first
-      }
-      // Both have no follow_up_date, sort by last name
-      return a.last_name.localeCompare(b.last_name);
-    });
-
-  const getContactTypeBadge = (type: string) => {
-    const variants = {
-      individual: 'default',
-      government: 'secondary',
-      commercial: 'outline',
-    } as const;
-    return variants[type as keyof typeof variants] || 'outline';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      cold: 'secondary',
-      warm: 'default',
-      hot: 'destructive',
-    } as const;
-    return variants[status as keyof typeof variants] || 'outline';
-  };
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (a.follow_up_date && b.follow_up_date) {
+          return new Date(a.follow_up_date).getTime() - new Date(b.follow_up_date).getTime();
+        }
+        if (a.follow_up_date && !b.follow_up_date) {
+          return -1;
+        }
+        if (!a.follow_up_date && b.follow_up_date) {
+          return 1;
+        }
+        return a.last_name.localeCompare(b.last_name);
+      }),
+    [contacts, searchQuery, statusFilter]
+  );
 
   return (
     <Layout>
@@ -104,13 +86,14 @@ export default function ContactsList() {
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search contacts..."
+              aria-label="Search contacts"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" aria-label="Filter by status">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -160,7 +143,7 @@ export default function ContactsList() {
                         <Badge variant={getContactTypeBadge(contact.contact_type)}>
                           {contact.contact_type}
                         </Badge>
-                        <Badge variant={getStatusBadge(contact.status)}>
+                        <Badge variant={getContactStatusBadge(contact.status)}>
                           {contact.status}
                         </Badge>
                       </div>

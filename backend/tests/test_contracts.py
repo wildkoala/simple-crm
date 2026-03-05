@@ -1,6 +1,25 @@
 """Tests for contracts CRUD and SAM.gov import endpoints."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi import HTTPException
+
+from app.services.import_service import _get_field
+
+
+def test_get_field_from_object():
+    """_get_field works with both dicts and objects."""
+    # Dict path
+    assert _get_field({"key": "val"}, "key") == "val"
+    assert _get_field({"key": "val"}, "missing") is None
+
+    # Object path
+    class Obj:
+        key = "val"
+
+    assert _get_field(Obj(), "key") == "val"
+    assert _get_field(Obj(), "missing") is None
 
 
 def test_get_contracts_empty(client, admin_headers, admin_user):
@@ -224,7 +243,7 @@ def test_patch_contract_forbidden(client, user_headers, sample_contract_owned_by
 
 def test_import_samgov_exception_in_loop(client, admin_headers):
     """Exception during individual opportunity import is caught and recorded."""
-    with patch("app.routers.contracts.generate_id", side_effect=[Exception("boom")]):
+    with patch("app.services.import_service.generate_id", side_effect=[Exception("boom")]):
         response = client.post(
             "/contracts/import/samgov",
             json={
@@ -247,29 +266,35 @@ def test_import_samgov_exception_in_loop(client, admin_headers):
     assert "boom" in data["errors"][0]
 
 
-def test_import_samgov_commit_failure(client, admin_headers):
+def test_import_samgov_commit_failure():
     """Final commit failure returns 500."""
-    with patch(
-        "app.routers.contracts.Session.commit",
-        side_effect=Exception("commit failed"),
-    ):
-        response = client.post(
-            "/contracts/import/samgov",
-            json={
-                "opportunities": [
-                    {
-                        "noticeId": "SAM-COMMITFAIL",
-                        "title": "Commit Fail Test",
-                        "responseDeadLine": "2026-06-01T00:00:00Z",
-                        "source": "SAM.gov",
-                    }
-                ],
-                "auto_create_contacts": False,
-            },
-            headers=admin_headers,
+    from app.services.import_service import import_opportunities
+
+    mock_db = MagicMock()
+    mock_db.begin_nested.return_value = MagicMock()
+    mock_db.query.return_value.filter.return_value.all.return_value = []
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+    mock_db.commit.side_effect = Exception("commit failed")
+
+    mock_user = MagicMock()
+    mock_user.id = "user-123"
+
+    with pytest.raises(HTTPException) as exc_info:
+        import_opportunities(
+            opportunities=[
+                {
+                    "noticeId": "SAM-COMMITFAIL",
+                    "title": "Commit Fail Test",
+                    "responseDeadLine": "2026-06-01T00:00:00Z",
+                    "source": "SAM.gov",
+                }
+            ],
+            auto_create_contacts=False,
+            current_user=mock_user,
+            db=mock_db,
         )
-    assert response.status_code == 500
-    assert "Failed to save" in response.json()["detail"]
+    assert exc_info.value.status_code == 500
+    assert "Failed to save" in exc_info.value.detail
 
 
 # --- SAM.gov import tests ---
