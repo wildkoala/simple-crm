@@ -27,6 +27,7 @@ def test_get_users_no_auth(client):
 def test_get_users_inactive_user(client, db):
     """Inactive user should be rejected by get_current_active_user."""
     from app.auth import create_access_token
+
     user = User(
         id=generate_id(),
         email="inactiveusers@test.com",
@@ -40,6 +41,7 @@ def test_get_users_inactive_user(client, db):
     db.add(user)
     db.commit()
     from datetime import timedelta
+
     token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))
     response = client.get("/users", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 403
@@ -57,12 +59,16 @@ def test_get_user_not_found(client, admin_headers):
 
 
 def test_create_user_admin_only(client, admin_headers):
-    response = client.post("/users", json={
-        "email": "created@test.com",
-        "name": "Created User",
-        "password": "createdpass123",
-        "role": "user",
-    }, headers=admin_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "created@test.com",
+            "name": "Created User",
+            "password": "createdpass123",
+            "role": "user",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == "created@test.com"
@@ -70,115 +76,167 @@ def test_create_user_admin_only(client, admin_headers):
 
 
 def test_create_user_as_admin_role(client, admin_headers):
-    response = client.post("/users", json={
-        "email": "newadmin@test.com",
-        "name": "New Admin",
-        "password": "adminpass12345",
-        "role": "admin",
-    }, headers=admin_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "newadmin@test.com",
+            "name": "New Admin",
+            "password": "adminpass12345",
+            "role": "admin",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
 
 
 def test_create_user_non_admin_forbidden(client, user_headers):
-    response = client.post("/users", json={
-        "email": "forbidden@test.com",
-        "name": "Forbidden",
-        "password": "password12345",
-        "role": "user",
-    }, headers=user_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "forbidden@test.com",
+            "name": "Forbidden",
+            "password": "password12345",
+            "role": "user",
+        },
+        headers=user_headers,
+    )
     assert response.status_code == 403
 
 
 def test_create_user_duplicate_email(client, admin_headers, regular_user):
-    response = client.post("/users", json={
-        "email": "user@test.com",
-        "name": "Duplicate",
-        "password": "password12345",
-        "role": "user",
-    }, headers=admin_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "user@test.com",
+            "name": "Duplicate",
+            "password": "password12345",
+            "role": "user",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"]
 
 
 def test_create_user_invalid_role(client, admin_headers):
-    response = client.post("/users", json={
-        "email": "badrole@test.com",
-        "name": "Bad Role",
-        "password": "password12345",
-        "role": "superadmin",
-    }, headers=admin_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "badrole@test.com",
+            "name": "Bad Role",
+            "password": "password12345",
+            "role": "superadmin",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 422  # Pydantic Literal validation
 
 
 def test_create_user_short_password(client, admin_headers):
-    response = client.post("/users", json={
-        "email": "short@test.com",
-        "name": "Short Pass",
-        "password": "short",
-        "role": "user",
-    }, headers=admin_headers)
+    response = client.post(
+        "/users",
+        json={
+            "email": "short@test.com",
+            "name": "Short Pass",
+            "password": "short",
+            "role": "user",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_update_user(client, admin_headers, regular_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "name": "Updated Name",
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "name": "Updated Name",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Name"
 
 
 def test_update_user_email(client, admin_headers, regular_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "email": "newemail@test.com",
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "email": "newemail@test.com",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert response.json()["email"] == "newemail@test.com"
 
 
 def test_update_user_email_conflict(client, admin_headers, regular_user, admin_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "email": "admin@test.com",
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "email": "admin@test.com",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 400
     assert "already in use" in response.json()["detail"]
 
 
 def test_update_user_role(client, admin_headers, regular_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "role": "admin",
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "role": "admin",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert response.json()["role"] == "admin"
 
 
 def test_update_user_invalid_role(client, admin_headers, regular_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "role": "superuser",
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "role": "superuser",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 422  # Pydantic Literal validation
 
 
 def test_update_user_is_active(client, admin_headers, regular_user):
-    response = client.put(f"/users/{regular_user.id}", json={
-        "is_active": False,
-    }, headers=admin_headers)
+    response = client.put(
+        f"/users/{regular_user.id}",
+        json={
+            "is_active": False,
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert response.json()["is_active"] is False
 
 
 def test_update_user_not_found(client, admin_headers):
-    response = client.put("/users/nonexistent-id", json={
-        "name": "Nobody",
-    }, headers=admin_headers)
+    response = client.put(
+        "/users/nonexistent-id",
+        json={
+            "name": "Nobody",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 404
 
 
 def test_update_user_non_admin(client, user_headers, admin_user):
-    response = client.put(f"/users/{admin_user.id}", json={
-        "name": "Hacked",
-    }, headers=user_headers)
+    response = client.put(
+        f"/users/{admin_user.id}",
+        json={
+            "name": "Hacked",
+        },
+        headers=user_headers,
+    )
     assert response.status_code == 403
 
 
@@ -225,6 +283,7 @@ def test_delete_user_non_admin(client, user_headers, admin_user):
 
 
 # --- API Key tests ---
+
 
 def test_generate_api_key(client, admin_headers):
     response = client.post("/users/me/api-key/generate", headers=admin_headers)

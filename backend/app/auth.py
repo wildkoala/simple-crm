@@ -1,29 +1,31 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-from dotenv import load_dotenv
-from app.database import get_db
-from app.models.models import User
 import hashlib
 import hmac
 import logging
 import os
 import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.models import User
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
+if not SECRET_KEY:  # pragma: no cover
     raise RuntimeError(
         "SECRET_KEY environment variable is not set. "
         "Set it in backend/.env or as an environment variable. "
-        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -87,32 +89,24 @@ def _get_user_from_jwt(token: str, db: Session) -> User:
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get the current authenticated user (JWT only)"""
     return _get_user_from_jwt(credentials.credentials, db)
 
 
-def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-):
+def get_current_active_user(current_user: User = Depends(get_current_user)):
     """Ensure user is active"""
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user account"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account")
     return current_user
 
 
-def get_current_admin_user(
-    current_user: User = Depends(get_current_active_user)
-):
+def get_current_admin_user(current_user: User = Depends(get_current_active_user)):
     """Ensure user is an admin"""
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
         )
     return current_user
 
@@ -137,10 +131,14 @@ def create_password_reset_token(user: User, db: Session) -> str:
 def verify_reset_token(token: str, db: Session) -> Optional[User]:
     """Verify password reset token and return user if valid"""
     token_hash = hash_token(token)
-    user = db.query(User).filter(
-        User.password_reset_token == token_hash,
-        User.password_reset_expires > datetime.now(timezone.utc)
-    ).first()
+    user = (
+        db.query(User)
+        .filter(
+            User.password_reset_token == token_hash,
+            User.password_reset_expires > datetime.now(timezone.utc),
+        )
+        .first()
+    )
 
     return user
 
@@ -152,7 +150,7 @@ def generate_api_key() -> str:
 
 def get_user_from_api_key(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> Optional[User]:
     """Get user from API key if the token is an API key"""
     try:
@@ -169,7 +167,7 @@ def get_user_from_api_key(
 
 def get_current_user_or_api_key(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get the current authenticated user (via JWT or API key)"""
     credentials_exception = HTTPException(
@@ -197,5 +195,5 @@ def validate_password(password: str) -> None:
     if len(password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
+            detail="Password must be at least 8 characters long",
         )

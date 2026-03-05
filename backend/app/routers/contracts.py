@@ -1,18 +1,22 @@
+from datetime import datetime
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, selectinload
-from typing import List
-from datetime import datetime
+
+from app.auth import get_current_user, get_current_user_or_api_key
 from app.database import get_db
-from app.models.models import Contract, Contact, User
+from app.models.models import Contact, Contract, User
 from app.schemas.schemas import (
     Contract as ContractSchema,
-    ContractCreate,
-    ContractUpdate,
-    ContractPatch,
-    SAMGovImportRequest,
-    SAMGovImportResponse
 )
-from app.auth import get_current_user, get_current_user_or_api_key
+from app.schemas.schemas import (
+    ContractCreate,
+    ContractPatch,
+    ContractUpdate,
+    SAMGovImportRequest,
+    SAMGovImportResponse,
+)
 from app.utils import generate_id
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
@@ -23,29 +27,33 @@ def get_contracts(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_or_api_key)
+    current_user: User = Depends(get_current_user_or_api_key),
 ):
     """Get all contracts - contracts are shared across all users"""
-    return db.query(Contract).options(
-        selectinload(Contract.assigned_contacts)
-    ).offset(skip).limit(limit).all()
+    return (
+        db.query(Contract)
+        .options(selectinload(Contract.assigned_contacts))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/{contract_id}", response_model=ContractSchema)
 def get_contract(
     contract_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific contract"""
-    contract = db.query(Contract).options(
-        selectinload(Contract.assigned_contacts)
-    ).filter(Contract.id == contract_id).first()
+    contract = (
+        db.query(Contract)
+        .options(selectinload(Contract.assigned_contacts))
+        .filter(Contract.id == contract_id)
+        .first()
+    )
     if not contract:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contract not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found")
     return contract
 
 
@@ -54,7 +62,7 @@ def _check_contract_authorization(contract: Contract, current_user: User):
     if contract.created_by_user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to modify this contract"
+            detail="Not authorized to modify this contract",
         )
 
 
@@ -62,17 +70,18 @@ def _resolve_owned_contacts(contact_ids: List[str], current_user: User, db: Sess
     """Resolve contact IDs, filtering to only contacts owned by the current user."""
     if not contact_ids:
         return []
-    return db.query(Contact).filter(
-        Contact.id.in_(contact_ids),
-        Contact.assigned_user_id == current_user.id
-    ).all()
+    return (
+        db.query(Contact)
+        .filter(Contact.id.in_(contact_ids), Contact.assigned_user_id == current_user.id)
+        .all()
+    )
 
 
 @router.post("", response_model=ContractSchema, status_code=status.HTTP_201_CREATED)
 def create_contract(
     contract: ContractCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new contract"""
     new_contract = Contract(
@@ -84,7 +93,7 @@ def create_contract(
         status=contract.status,
         submission_link=contract.submission_link,
         notes=contract.notes,
-        created_by_user_id=current_user.id
+        created_by_user_id=current_user.id,
     )
 
     # Add assigned contacts (only those owned by current user)
@@ -103,15 +112,12 @@ def update_contract(
     contract_id: str,
     contract_update: ContractUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Update a contract - only creator or admin can modify"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contract not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found")
 
     _check_contract_authorization(contract, current_user)
 
@@ -140,15 +146,12 @@ def patch_contract(
     contract_id: str,
     updates: ContractPatch,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Partially update a contract"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contract not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found")
 
     _check_contract_authorization(contract, current_user)
 
@@ -157,9 +160,7 @@ def patch_contract(
     # Handle assigned_contact_ids separately (relationship, not a column)
     if "assigned_contact_ids" in update_data:
         contact_ids = update_data.pop("assigned_contact_ids")
-        contract.assigned_contacts = _resolve_owned_contacts(
-            contact_ids, current_user, db
-        )
+        contract.assigned_contacts = _resolve_owned_contacts(contact_ids, current_user, db)
 
     for field, value in update_data.items():
         setattr(contract, field, value)
@@ -173,15 +174,12 @@ def patch_contract(
 def delete_contract(
     contract_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a contract - only creator or admin can delete"""
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contract not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found")
 
     _check_contract_authorization(contract, current_user)
 
@@ -194,7 +192,7 @@ def delete_contract(
 def import_samgov_opportunities(
     import_request: SAMGovImportRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user_or_api_key)
+    current_user: User = Depends(get_current_user_or_api_key),
 ):
     """
     Import contract opportunities from SAM.gov
@@ -215,9 +213,9 @@ def import_samgov_opportunities(
         savepoint = db.begin_nested()
         try:
             # Check if contract already exists by noticeId
-            existing_contract = db.query(Contract).filter(
-                Contract.sam_gov_notice_id == opp.noticeId
-            ).first()
+            existing_contract = (
+                db.query(Contract).filter(Contract.sam_gov_notice_id == opp.noticeId).first()
+            )
 
             if existing_contract:
                 contracts_skipped += 1
@@ -228,7 +226,7 @@ def import_samgov_opportunities(
             deadline = None
             if opp.responseDeadLine:
                 try:
-                    deadline = datetime.fromisoformat(opp.responseDeadLine.replace('Z', '+00:00'))
+                    deadline = datetime.fromisoformat(opp.responseDeadLine.replace("Z", "+00:00"))
                 except ValueError:
                     try:
                         deadline = datetime.strptime(opp.responseDeadLine[:10], "%Y-%m-%d")
@@ -248,9 +246,9 @@ def import_samgov_opportunities(
                 for poc in opp.pointOfContact:
                     if poc.email and poc.fullName:
                         # Check if contact already exists
-                        existing_contact = db.query(Contact).filter(
-                            Contact.email == poc.email
-                        ).first()
+                        existing_contact = (
+                            db.query(Contact).filter(Contact.email == poc.email).first()
+                        )
 
                         if existing_contact:
                             contact_ids.append(existing_contact.id)
@@ -271,7 +269,7 @@ def import_samgov_opportunities(
                                 status="warm",
                                 needs_follow_up=True,
                                 notes=f"Auto-imported from SAM.gov opportunity: {opp.title}",
-                                assigned_user_id=current_user.id
+                                assigned_user_id=current_user.id,
                             )
                             db.add(new_contact)
                             db.flush()
@@ -298,7 +296,7 @@ def import_samgov_opportunities(
                 sam_gov_notice_id=opp.noticeId,
                 submission_link=opp.uiLink,
                 notes="\n".join(notes_parts),
-                created_by_user_id=current_user.id
+                created_by_user_id=current_user.id,
             )
 
             # Assign contacts
@@ -322,12 +320,12 @@ def import_samgov_opportunities(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save imports: {str(e)}"
+            detail=f"Failed to save imports: {str(e)}",
         )
 
     return SAMGovImportResponse(
         contracts_created=contracts_created,
         contracts_skipped=contracts_skipped,
         contacts_created=contacts_created,
-        errors=errors
+        errors=errors,
     )

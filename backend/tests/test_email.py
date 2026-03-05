@@ -1,7 +1,8 @@
 """Tests for email module."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from app.email import send_email, send_password_reset_email
 
@@ -9,8 +10,7 @@ from app.email import send_email, send_password_reset_email
 @pytest.mark.asyncio
 async def test_send_email_dev_mode():
     """When SMTP not configured, email is logged but not sent."""
-    with patch("app.email.SMTP_USERNAME", ""), \
-         patch("app.email.SMTP_PASSWORD", ""):
+    with patch("app.email.SMTP_USERNAME", ""), patch("app.email.SMTP_PASSWORD", ""):
         # Should not raise
         await send_email("test@example.com", "Subject", "<p>HTML</p>", "Text")
 
@@ -18,8 +18,7 @@ async def test_send_email_dev_mode():
 @pytest.mark.asyncio
 async def test_send_email_dev_mode_no_text():
     """Dev mode with no text_content."""
-    with patch("app.email.SMTP_USERNAME", ""), \
-         patch("app.email.SMTP_PASSWORD", ""):
+    with patch("app.email.SMTP_USERNAME", ""), patch("app.email.SMTP_PASSWORD", ""):
         await send_email("test@example.com", "Subject", "<p>HTML</p>")
 
 
@@ -31,9 +30,11 @@ async def test_send_email_smtp_configured():
     mock_smtp_cls.return_value.__enter__ = MagicMock(return_value=mock_server)
     mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
 
-    with patch("app.email.SMTP_USERNAME", "user@test.com"), \
-         patch("app.email.SMTP_PASSWORD", "password123"), \
-         patch("app.email.smtplib.SMTP", mock_smtp_cls):
+    with (
+        patch("app.email.SMTP_USERNAME", "user@test.com"),
+        patch("app.email.SMTP_PASSWORD", "password123"),
+        patch("app.email.smtplib.SMTP", mock_smtp_cls),
+    ):
         await send_email(
             "recipient@test.com",
             "Test Subject",
@@ -53,9 +54,11 @@ async def test_send_email_smtp_html_only():
     mock_smtp_cls.return_value.__enter__ = MagicMock(return_value=mock_server)
     mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
 
-    with patch("app.email.SMTP_USERNAME", "user@test.com"), \
-         patch("app.email.SMTP_PASSWORD", "password123"), \
-         patch("app.email.smtplib.SMTP", mock_smtp_cls):
+    with (
+        patch("app.email.SMTP_USERNAME", "user@test.com"),
+        patch("app.email.SMTP_PASSWORD", "password123"),
+        patch("app.email.smtplib.SMTP", mock_smtp_cls),
+    ):
         await send_email(
             "recipient@test.com",
             "Test Subject",
@@ -73,9 +76,11 @@ async def test_send_email_smtp_failure():
     mock_smtp_cls.return_value.__enter__ = MagicMock(return_value=mock_server)
     mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
 
-    with patch("app.email.SMTP_USERNAME", "user@test.com"), \
-         patch("app.email.SMTP_PASSWORD", "password123"), \
-         patch("app.email.smtplib.SMTP", mock_smtp_cls):
+    with (
+        patch("app.email.SMTP_USERNAME", "user@test.com"),
+        patch("app.email.SMTP_PASSWORD", "password123"),
+        patch("app.email.smtplib.SMTP", mock_smtp_cls),
+    ):
         with pytest.raises(Exception, match="SMTP connection failed"):
             await send_email("r@test.com", "Subject", "<p>X</p>")
 

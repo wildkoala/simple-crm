@@ -6,11 +6,19 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from app.database import engine, SessionLocal
+from slowapi.util import get_remote_address
+
+from app.database import SessionLocal, engine
 from app.models.models import Base
-from app.routers import auth, contacts, communications, contracts, contacts_followup, users
+from app.routers import (
+    auth,
+    communications,
+    contacts,
+    contacts_followup,
+    contracts,
+    users,
+)
 from app.seed_data import seed_database
 
 # Configure structured logging
@@ -57,10 +65,12 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Too many requests. Please try again later."},
     )
 
+
 # Disable favicon
-@app.get('/favicon.ico', include_in_schema=False)
+@app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return {"detail": "Not Found"}
+
 
 # Configure CORS
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
@@ -88,11 +98,7 @@ app.include_router(users.router)
 @app.get("/")
 def root():
     """API root endpoint"""
-    return {
-        "message": "Pretorin CRM API",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    return {"message": "Pretorin CRM API", "version": "1.0.0", "docs": "/docs"}
 
 
 @app.get("/health")

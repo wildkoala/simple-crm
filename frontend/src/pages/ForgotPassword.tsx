@@ -20,7 +20,7 @@ export default function ForgotPassword() {
       await requestPasswordReset(email);
       setSubmitted(true);
       toast.success('Password reset instructions sent to your email');
-    } catch (error) {
+    } catch (_error) {
       toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

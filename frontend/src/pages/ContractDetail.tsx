@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -23,11 +23,7 @@ export default function ContractDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       if (id === 'new') {
         const newContract = {
@@ -56,7 +52,11 @@ export default function ContractDetail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleEdit = () => {
     setEditForm({ ...contract! });

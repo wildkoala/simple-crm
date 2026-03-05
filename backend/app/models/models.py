@@ -1,14 +1,16 @@
-from sqlalchemy import Boolean, Column, String, DateTime, ForeignKey, Table
-from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table
+from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 # Association table for many-to-many relationship between contracts and contacts
 contract_contacts = Table(
-    'contract_contacts',
+    "contract_contacts",
     Base.metadata,
-    Column('contract_id', String(36), ForeignKey('contracts.id', ondelete='CASCADE')),
-    Column('contact_id', String(36), ForeignKey('contacts.id', ondelete='CASCADE'))
+    Column("contract_id", String(36), ForeignKey("contracts.id", ondelete="CASCADE")),
+    Column("contact_id", String(36), ForeignKey("contacts.id", ondelete="CASCADE")),
 )
 
 
@@ -31,8 +33,12 @@ class Contact(Base):
     assigned_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
     # Relationships
-    communications = relationship("Communication", back_populates="contact", cascade="all, delete-orphan")
-    contracts = relationship("Contract", secondary=contract_contacts, back_populates="assigned_contacts")
+    communications = relationship(
+        "Communication", back_populates="contact", cascade="all, delete-orphan"
+    )
+    contracts = relationship(
+        "Contract", secondary=contract_contacts, back_populates="assigned_contacts"
+    )
     assigned_user = relationship("User", back_populates="assigned_contacts")
 
 
@@ -58,7 +64,9 @@ class Contract(Base):
     description = Column(String(50000), default="")
     source = Column(String(200), nullable=False)
     deadline = Column(DateTime, nullable=False)
-    status = Column(String(20), nullable=False, index=True)  # prospective, in progress, submitted, not a good fit
+    status = Column(
+        String(20), nullable=False, index=True
+    )  # prospective, in progress, submitted, not a good fit
     sam_gov_notice_id = Column(String(255), nullable=True, unique=True, index=True)
     submission_link = Column(String(2048), nullable=True)
     notes = Column(String(10000), default="")
@@ -66,7 +74,9 @@ class Contract(Base):
     created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    assigned_contacts = relationship("Contact", secondary=contract_contacts, back_populates="contracts")
+    assigned_contacts = relationship(
+        "Contact", secondary=contract_contacts, back_populates="contracts"
+    )
     created_by_user = relationship("User", foreign_keys=[created_by_user_id])
 
     @property
@@ -89,7 +99,11 @@ class User(Base):
     password_reset_token = Column(String(255), nullable=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     # Relationships
     assigned_contacts = relationship("Contact", back_populates="assigned_user")

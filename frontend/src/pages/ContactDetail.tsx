@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -70,7 +70,7 @@ export default function ContactDetail() {
     } else if (id) {
       loadContact(id);
     }
-  }, [id, currentUser]);
+  }, [id, currentUser, loadContact]);
 
   const loadUsers = async () => {
     try {
@@ -81,7 +81,7 @@ export default function ContactDetail() {
     }
   };
 
-  const loadContact = async (contactId: string) => {
+  const loadContact = useCallback(async (contactId: string) => {
     try {
       const [contactData, commData] = await Promise.all([
         api.getContact(contactId),
@@ -89,13 +89,13 @@ export default function ContactDetail() {
       ]);
       setContact(contactData);
       setCommunications(commData);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to load contact');
       navigate('/contacts');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate]);
 
   const handleSave = async () => {
     if (!editForm.first_name || !editForm.last_name || !editForm.email) {
@@ -114,7 +114,7 @@ export default function ContactDetail() {
         setIsEditDialogOpen(false);
         toast.success('Contact saved successfully');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save contact');
     }
   };
@@ -125,7 +125,7 @@ export default function ContactDetail() {
       await api.deleteContact(contact.id);
       toast.success('Contact deleted successfully');
       navigate('/contacts');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete contact');
     }
   };
@@ -154,7 +154,7 @@ export default function ContactDetail() {
       if (id && id !== 'new') {
         loadContact(id);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to log communication');
     }
   };
@@ -165,7 +165,7 @@ export default function ContactDetail() {
       const updated = await api.patchContact(contact.id, { status });
       setContact(updated);
       toast.success(`Status updated to ${status}`);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update status');
     }
   };

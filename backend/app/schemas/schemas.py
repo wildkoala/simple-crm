@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Literal
 from datetime import datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 # Contact schemas
@@ -10,8 +11,8 @@ class ContactBase(BaseModel):
     email: EmailStr
     phone: str = Field(max_length=50)
     organization: str = Field(max_length=200)
-    contact_type: Literal['individual', 'commercial', 'government']
-    status: Literal['cold', 'warm', 'hot']
+    contact_type: Literal["individual", "commercial", "government"]
+    status: Literal["cold", "warm", "hot"]
     needs_follow_up: bool = False
     follow_up_date: Optional[datetime] = None
     notes: str = Field(default="", max_length=10000)
@@ -32,8 +33,8 @@ class ContactPatch(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(default=None, max_length=50)
     organization: Optional[str] = Field(default=None, max_length=200)
-    contact_type: Optional[Literal['individual', 'commercial', 'government']] = None
-    status: Optional[Literal['cold', 'warm', 'hot']] = None
+    contact_type: Optional[Literal["individual", "commercial", "government"]] = None
+    status: Optional[Literal["cold", "warm", "hot"]] = None
     needs_follow_up: Optional[bool] = None
     follow_up_date: Optional[datetime] = None
     notes: Optional[str] = Field(default=None, max_length=10000)
@@ -65,7 +66,7 @@ class Contact(ContactBase):
 class CommunicationBase(BaseModel):
     contact_id: str
     date: datetime
-    type: Literal['email', 'phone', 'meeting', 'other']
+    type: Literal["email", "phone", "meeting", "other"]
     notes: str = Field(default="", max_length=10000)
 
 
@@ -87,7 +88,7 @@ class ContractBase(BaseModel):
     description: str = Field(default="", max_length=50000)
     source: str = Field(max_length=200)
     deadline: datetime
-    status: Literal['prospective', 'in progress', 'submitted', 'not a good fit']
+    status: Literal["prospective", "in progress", "submitted", "not a good fit"]
     submission_link: Optional[str] = Field(default=None, max_length=2048)
     notes: str = Field(default="", max_length=10000)
 
@@ -105,7 +106,7 @@ class ContractPatch(BaseModel):
     description: Optional[str] = Field(default=None, max_length=50000)
     source: Optional[str] = Field(default=None, max_length=200)
     deadline: Optional[datetime] = None
-    status: Optional[Literal['prospective', 'in progress', 'submitted', 'not a good fit']] = None
+    status: Optional[Literal["prospective", "in progress", "submitted", "not a good fit"]] = None
     submission_link: Optional[str] = Field(default=None, max_length=2048)
     notes: Optional[str] = Field(default=None, max_length=10000)
     assigned_contact_ids: Optional[List[str]] = None
@@ -168,13 +169,13 @@ class UserCreate(UserBase):
 
 class UserCreateByAdmin(UserBase):
     password: str = Field(min_length=8, max_length=128)
-    role: Literal['admin', 'user'] = "user"
+    role: Literal["admin", "user"] = "user"
 
 
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=150)
     email: Optional[EmailStr] = None
-    role: Optional[Literal['admin', 'user']] = None
+    role: Optional[Literal["admin", "user"]] = None
     is_active: Optional[bool] = None
 
 

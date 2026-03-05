@@ -1,11 +1,9 @@
 """Tests for seed data module."""
 
-from unittest.mock import MagicMock
-
 from app.seed_data import (
     generate_id,
-    get_seed_contacts,
     get_seed_communications,
+    get_seed_contacts,
     get_seed_contracts,
     get_seed_user,
     seed_database,
@@ -67,7 +65,8 @@ def test_get_seed_contracts_empty_contacts():
 
 def test_seed_database_fresh(db):
     seed_database(db)
-    from app.models.models import User, Contact, Communication, Contract
+    from app.models.models import Communication, Contact, Contract, User
+
     assert db.query(User).count() == 1
     assert db.query(Contact).count() == 5
     assert db.query(Communication).count() == 4
@@ -79,4 +78,5 @@ def test_seed_database_already_seeded(db):
     seed_database(db)
     seed_database(db)
     from app.models.models import User
+
     assert db.query(User).count() == 1

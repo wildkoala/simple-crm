@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 
-from app.auth import get_password_hash
 from app.models.models import Contact
 from app.utils import generate_id
 

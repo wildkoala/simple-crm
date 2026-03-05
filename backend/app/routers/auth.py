@@ -1,29 +1,37 @@
 from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models.models import User
-from app.schemas.schemas import (
-    LoginRequest, Token, User as UserSchema, UserCreate,
-    PasswordResetRequest, PasswordReset, PasswordChange
-)
+
 from app.auth import (
-    verify_password,
-    get_password_hash,
-    create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    get_current_user,
+    create_access_token,
+    create_password_reset_token,
     get_current_active_user,
     get_current_admin_user,
     get_current_user_or_api_key,
-    create_password_reset_token,
+    get_password_hash,
+    validate_password,
+    verify_password,
     verify_reset_token,
-    validate_password
+)
+from app.database import get_db
+from app.email import send_password_reset_email
+from app.models.models import User
+from app.schemas.schemas import (
+    LoginRequest,
+    PasswordChange,
+    PasswordReset,
+    PasswordResetRequest,
+    Token,
+    UserCreate,
+)
+from app.schemas.schemas import (
+    User as UserSchema,
 )
 from app.utils import generate_id
-from app.email import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 limiter = Limiter(key_func=get_remote_address)
@@ -46,13 +54,11 @@ def login(request: Request, login_request: LoginRequest, db: Session = Depends(g
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive. Please contact an administrator."
+            detail="Account is inactive. Please contact an administrator.",
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
 
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -61,7 +67,7 @@ def login(request: Request, login_request: LoginRequest, db: Session = Depends(g
 def register(
     user_create: UserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_current_admin_user),
 ):
     """Register a new user (admin only)"""
     validate_password(user_create.password)
@@ -70,8 +76,7 @@ def register(
     existing_user = db.query(User).filter(User.email == user_create.email).first()
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
     # Create new user
@@ -79,7 +84,7 @@ def register(
         id=generate_id(),
         email=user_create.email,
         name=user_create.name,
-        hashed_password=get_password_hash(user_create.password)
+        hashed_password=get_password_hash(user_create.password),
     )
 
     db.add(new_user)
@@ -93,19 +98,14 @@ def register(
 def get_me(current_user: User = Depends(get_current_user_or_api_key)):
     """Get current user information"""
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user account"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account")
     return current_user
 
 
 @router.post("/password-reset-request")
 @limiter.limit("3/minute")
 async def request_password_reset(
-    request: Request,
-    body: PasswordResetRequest,
-    db: Session = Depends(get_db)
+    request: Request, body: PasswordResetRequest, db: Session = Depends(get_db)
 ):
     """Request password reset - always returns success to prevent email enumeration"""
     user = db.query(User).filter(User.email == body.email).first()
@@ -121,18 +121,14 @@ async def request_password_reset(
 
 @router.post("/password-reset")
 @limiter.limit("5/minute")
-def reset_password(
-    request: Request,
-    reset: PasswordReset,
-    db: Session = Depends(get_db)
-):
+def reset_password(request: Request, reset: PasswordReset, db: Session = Depends(get_db)):
     """Reset password using token"""
     user = verify_reset_token(reset.token, db)
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token"
+            detail="Invalid or expired reset token",
         )
 
     validate_password(reset.new_password)
@@ -150,14 +146,13 @@ def reset_password(
 def change_password(
     password_change: PasswordChange,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Change password for currently logged in user"""
     # Verify current password
     if not verify_password(password_change.current_password, current_user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect current password"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect current password"
         )
 
     validate_password(password_change.new_password)

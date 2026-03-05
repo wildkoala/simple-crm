@@ -29,7 +29,7 @@ export default function UserManagement() {
     try {
       const data = await getUsers();
       setUsers(data);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to load users');
     } finally {
       setIsLoading(false);

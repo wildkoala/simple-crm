@@ -1,10 +1,17 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List
+
+from app.auth import get_current_user
 from app.database import get_db
 from app.models.models import Communication, Contact, User
-from app.schemas.schemas import Communication as CommunicationSchema, CommunicationCreate
-from app.auth import get_current_user
+from app.schemas.schemas import (
+    Communication as CommunicationSchema,
+)
+from app.schemas.schemas import (
+    CommunicationCreate,
+)
 from app.utils import generate_id
 
 router = APIRouter(prefix="/communications", tags=["communications"])
@@ -16,10 +23,12 @@ def get_communications(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Get all communications for the current user's contacts, optionally filtered by contact_id"""
-    query = db.query(Communication).join(Contact).filter(Contact.assigned_user_id == current_user.id)
+    query = (
+        db.query(Communication).join(Contact).filter(Contact.assigned_user_id == current_user.id)
+    )
     if contact_id:
         query = query.filter(Communication.contact_id == contact_id)
     return query.offset(skip).limit(limit).all()
@@ -29,18 +38,20 @@ def get_communications(
 def get_communication(
     communication_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific communication"""
-    communication = db.query(Communication).join(Contact).filter(
-        Communication.id == communication_id,
-        Contact.assigned_user_id == current_user.id
-    ).first()
-    if not communication:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Communication not found"
+    communication = (
+        db.query(Communication)
+        .join(Contact)
+        .filter(
+            Communication.id == communication_id,
+            Contact.assigned_user_id == current_user.id,
         )
+        .first()
+    )
+    if not communication:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Communication not found")
     return communication
 
 
@@ -48,26 +59,27 @@ def get_communication(
 def create_communication(
     communication: CommunicationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new communication"""
     # Verify contact exists and belongs to current user
-    contact = db.query(Contact).filter(
-        Contact.id == communication.contact_id,
-        Contact.assigned_user_id == current_user.id
-    ).first()
-    if not contact:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Contact not found"
+    contact = (
+        db.query(Contact)
+        .filter(
+            Contact.id == communication.contact_id,
+            Contact.assigned_user_id == current_user.id,
         )
+        .first()
+    )
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
 
     new_communication = Communication(
         id=generate_id(),
         contact_id=communication.contact_id,
         date=communication.date,
         type=communication.type,
-        notes=communication.notes
+        notes=communication.notes,
     )
 
     db.add(new_communication)
@@ -84,18 +96,20 @@ def create_communication(
 def delete_communication(
     communication_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a communication"""
-    communication = db.query(Communication).join(Contact).filter(
-        Communication.id == communication_id,
-        Contact.assigned_user_id == current_user.id
-    ).first()
-    if not communication:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Communication not found"
+    communication = (
+        db.query(Communication)
+        .join(Contact)
+        .filter(
+            Communication.id == communication_id,
+            Contact.assigned_user_id == current_user.id,
         )
+        .first()
+    )
+    if not communication:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Communication not found")
 
     db.delete(communication)
     db.commit()

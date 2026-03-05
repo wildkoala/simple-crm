@@ -1,18 +1,21 @@
 """Tests for auth router endpoints."""
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
-from app.auth import get_password_hash, create_password_reset_token
+from app.auth import create_password_reset_token, get_password_hash
 from app.models.models import User
 from app.utils import generate_id
 
 
 def test_login_success(client, admin_user):
-    response = client.post("/auth/login", json={
-        "email": "admin@test.com",
-        "password": "adminpass123",
-    })
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "admin@test.com",
+            "password": "adminpass123",
+        },
+    )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
@@ -20,37 +23,50 @@ def test_login_success(client, admin_user):
 
 
 def test_login_wrong_password(client, admin_user):
-    response = client.post("/auth/login", json={
-        "email": "admin@test.com",
-        "password": "wrongpassword",
-    })
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "admin@test.com",
+            "password": "wrongpassword",
+        },
+    )
     assert response.status_code == 401
     assert "Incorrect email or password" in response.json()["detail"]
 
 
 def test_login_nonexistent_user(client):
-    response = client.post("/auth/login", json={
-        "email": "nobody@test.com",
-        "password": "password123",
-    })
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "nobody@test.com",
+            "password": "password123",
+        },
+    )
     assert response.status_code == 401
 
 
 def test_login_inactive_user(client, inactive_user):
-    response = client.post("/auth/login", json={
-        "email": "inactive@test.com",
-        "password": "inactivepass123",
-    })
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": "inactive@test.com",
+            "password": "inactivepass123",
+        },
+    )
     assert response.status_code == 403
     assert "inactive" in response.json()["detail"].lower()
 
 
 def test_register_admin_only(client, admin_headers):
-    response = client.post("/auth/register", json={
-        "email": "newuser@test.com",
-        "name": "New User",
-        "password": "newpass12345",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "newuser@test.com",
+            "name": "New User",
+            "password": "newpass12345",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == "newuser@test.com"
@@ -58,39 +74,54 @@ def test_register_admin_only(client, admin_headers):
 
 
 def test_register_non_admin_forbidden(client, user_headers):
-    response = client.post("/auth/register", json={
-        "email": "another@test.com",
-        "name": "Another User",
-        "password": "anotherpass123",
-    }, headers=user_headers)
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "another@test.com",
+            "name": "Another User",
+            "password": "anotherpass123",
+        },
+        headers=user_headers,
+    )
     assert response.status_code == 403
 
 
 def test_register_duplicate_email(client, admin_headers, admin_user):
-    response = client.post("/auth/register", json={
-        "email": "admin@test.com",
-        "name": "Duplicate",
-        "password": "password12345",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "admin@test.com",
+            "name": "Duplicate",
+            "password": "password12345",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 400
     assert "already registered" in response.json()["detail"]
 
 
 def test_register_short_password(client, admin_headers):
-    response = client.post("/auth/register", json={
-        "email": "short@test.com",
-        "name": "Short Pass",
-        "password": "short",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "short@test.com",
+            "name": "Short Pass",
+            "password": "short",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_register_no_auth(client):
-    response = client.post("/auth/register", json={
-        "email": "noauth@test.com",
-        "name": "No Auth",
-        "password": "password12345",
-    })
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "noauth@test.com",
+            "name": "No Auth",
+            "password": "password12345",
+        },
+    )
     assert response.status_code == 403
 
 
@@ -123,6 +154,7 @@ def test_get_me_inactive_user(client, db):
     db.commit()
 
     from app.auth import create_access_token
+
     token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 403
@@ -147,9 +179,12 @@ def test_get_me_invalid_jwt(client):
 
 @patch("app.routers.auth.send_password_reset_email", new_callable=AsyncMock)
 def test_password_reset_request_existing_user(mock_email, client, admin_user):
-    response = client.post("/auth/password-reset-request", json={
-        "email": "admin@test.com",
-    })
+    response = client.post(
+        "/auth/password-reset-request",
+        json={
+            "email": "admin@test.com",
+        },
+    )
     assert response.status_code == 200
     assert "If the email exists" in response.json()["message"]
     mock_email.assert_called_once()
@@ -157,9 +192,12 @@ def test_password_reset_request_existing_user(mock_email, client, admin_user):
 
 @patch("app.routers.auth.send_password_reset_email", new_callable=AsyncMock)
 def test_password_reset_request_nonexistent_user(mock_email, client):
-    response = client.post("/auth/password-reset-request", json={
-        "email": "nobody@test.com",
-    })
+    response = client.post(
+        "/auth/password-reset-request",
+        json={
+            "email": "nobody@test.com",
+        },
+    )
     assert response.status_code == 200
     assert "If the email exists" in response.json()["message"]
     mock_email.assert_not_called()
@@ -167,78 +205,106 @@ def test_password_reset_request_nonexistent_user(mock_email, client):
 
 @patch("app.routers.auth.send_password_reset_email", new_callable=AsyncMock)
 def test_password_reset_request_inactive_user(mock_email, client, inactive_user):
-    response = client.post("/auth/password-reset-request", json={
-        "email": "inactive@test.com",
-    })
+    response = client.post(
+        "/auth/password-reset-request",
+        json={
+            "email": "inactive@test.com",
+        },
+    )
     assert response.status_code == 200
     mock_email.assert_not_called()
 
 
 def test_password_reset_success(client, db, admin_user):
     token = create_password_reset_token(admin_user, db)
-    response = client.post("/auth/password-reset", json={
-        "token": token,
-        "new_password": "newpassword123",
-    })
+    response = client.post(
+        "/auth/password-reset",
+        json={
+            "token": token,
+            "new_password": "newpassword123",
+        },
+    )
     assert response.status_code == 200
     assert "successfully" in response.json()["message"]
 
 
 def test_password_reset_invalid_token(client):
-    response = client.post("/auth/password-reset", json={
-        "token": "invalidtoken",
-        "new_password": "newpassword123",
-    })
+    response = client.post(
+        "/auth/password-reset",
+        json={
+            "token": "invalidtoken",
+            "new_password": "newpassword123",
+        },
+    )
     assert response.status_code == 400
     assert "Invalid or expired" in response.json()["detail"]
 
 
 def test_password_reset_short_password(client, db, admin_user):
     token = create_password_reset_token(admin_user, db)
-    response = client.post("/auth/password-reset", json={
-        "token": token,
-        "new_password": "short",
-    })
+    response = client.post(
+        "/auth/password-reset",
+        json={
+            "token": token,
+            "new_password": "short",
+        },
+    )
     assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_password_change_success(client, admin_headers, admin_user):
-    response = client.post("/auth/password-change", json={
-        "current_password": "adminpass123",
-        "new_password": "newadminpass123",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/password-change",
+        json={
+            "current_password": "adminpass123",
+            "new_password": "newadminpass123",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 200
     assert "successfully" in response.json()["message"]
 
 
 def test_password_change_wrong_current(client, admin_headers):
-    response = client.post("/auth/password-change", json={
-        "current_password": "wrongcurrent",
-        "new_password": "newpassword123",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/password-change",
+        json={
+            "current_password": "wrongcurrent",
+            "new_password": "newpassword123",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 400
     assert "Incorrect current password" in response.json()["detail"]
 
 
 def test_password_change_short_new_password(client, admin_headers):
-    response = client.post("/auth/password-change", json={
-        "current_password": "adminpass123",
-        "new_password": "short",
-    }, headers=admin_headers)
+    response = client.post(
+        "/auth/password-change",
+        json={
+            "current_password": "adminpass123",
+            "new_password": "short",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 422  # Pydantic validates min_length on schema
 
 
 def test_password_change_no_auth(client):
-    response = client.post("/auth/password-change", json={
-        "current_password": "whatever",
-        "new_password": "newpassword123",
-    })
+    response = client.post(
+        "/auth/password-change",
+        json={
+            "current_password": "whatever",
+            "new_password": "newpassword123",
+        },
+    )
     assert response.status_code == 403
 
 
 def test_get_current_user_no_sub_in_token(client):
     """Token with no 'sub' field should fail."""
     from app.auth import create_access_token
+
     token = create_access_token(data={}, expires_delta=timedelta(minutes=30))
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
@@ -247,6 +313,7 @@ def test_get_current_user_no_sub_in_token(client):
 def test_get_current_user_nonexistent_email(client):
     """Token with email that doesn't exist in DB should fail."""
     from app.auth import create_access_token
+
     token = create_access_token(data={"sub": "ghost@test.com"}, expires_delta=timedelta(minutes=30))
     response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401

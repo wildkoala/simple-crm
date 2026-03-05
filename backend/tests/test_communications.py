@@ -1,7 +1,5 @@
 """Tests for communications CRUD endpoints."""
 
-from datetime import datetime, timezone
-
 
 def test_get_communications_empty(client, admin_headers, admin_user):
     response = client.get("/communications", headers=admin_headers)
@@ -17,7 +15,9 @@ def test_get_communications(client, admin_headers, sample_communication):
     assert data[0]["type"] == "email"
 
 
-def test_get_communications_filtered_by_contact(client, admin_headers, sample_contact, sample_communication):
+def test_get_communications_filtered_by_contact(
+    client, admin_headers, sample_contact, sample_communication
+):
     response = client.get(
         f"/communications?contact_id={sample_contact.id}",
         headers=admin_headers,
@@ -63,12 +63,16 @@ def test_get_communication_wrong_user(client, user_headers, sample_communication
 
 
 def test_create_communication(client, admin_headers, sample_contact):
-    response = client.post("/communications", json={
-        "contact_id": sample_contact.id,
-        "date": "2026-03-01T10:00:00",
-        "type": "phone",
-        "notes": "Discussed project timeline",
-    }, headers=admin_headers)
+    response = client.post(
+        "/communications",
+        json={
+            "contact_id": sample_contact.id,
+            "date": "2026-03-01T10:00:00",
+            "type": "phone",
+            "notes": "Discussed project timeline",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["type"] == "phone"
@@ -76,12 +80,16 @@ def test_create_communication(client, admin_headers, sample_contact):
 
 
 def test_create_communication_updates_last_contacted(client, admin_headers, sample_contact):
-    client.post("/communications", json={
-        "contact_id": sample_contact.id,
-        "date": "2026-03-01T10:00:00",
-        "type": "meeting",
-        "notes": "Meeting notes",
-    }, headers=admin_headers)
+    client.post(
+        "/communications",
+        json={
+            "contact_id": sample_contact.id,
+            "date": "2026-03-01T10:00:00",
+            "type": "meeting",
+            "notes": "Meeting notes",
+        },
+        headers=admin_headers,
+    )
 
     # Check that last_contacted_at was updated
     response = client.get(f"/contacts/{sample_contact.id}", headers=admin_headers)
@@ -90,23 +98,31 @@ def test_create_communication_updates_last_contacted(client, admin_headers, samp
 
 
 def test_create_communication_contact_not_found(client, admin_headers):
-    response = client.post("/communications", json={
-        "contact_id": "nonexistent-id",
-        "date": "2026-03-01T10:00:00",
-        "type": "email",
-        "notes": "Test",
-    }, headers=admin_headers)
+    response = client.post(
+        "/communications",
+        json={
+            "contact_id": "nonexistent-id",
+            "date": "2026-03-01T10:00:00",
+            "type": "email",
+            "notes": "Test",
+        },
+        headers=admin_headers,
+    )
     assert response.status_code == 404
 
 
 def test_create_communication_wrong_user_contact(client, user_headers, sample_contact):
     """Regular user cannot create communication for admin's contact."""
-    response = client.post("/communications", json={
-        "contact_id": sample_contact.id,
-        "date": "2026-03-01T10:00:00",
-        "type": "email",
-        "notes": "Unauthorized",
-    }, headers=user_headers)
+    response = client.post(
+        "/communications",
+        json={
+            "contact_id": sample_contact.id,
+            "date": "2026-03-01T10:00:00",
+            "type": "email",
+            "notes": "Unauthorized",
+        },
+        headers=user_headers,
+    )
     assert response.status_code == 404
 
 
@@ -139,10 +155,13 @@ def test_delete_communication_wrong_user(client, user_headers, sample_communicat
 
 
 def test_create_communication_no_auth(client, sample_contact):
-    response = client.post("/communications", json={
-        "contact_id": sample_contact.id,
-        "date": "2026-03-01T10:00:00",
-        "type": "email",
-        "notes": "Test",
-    })
+    response = client.post(
+        "/communications",
+        json={
+            "contact_id": sample_contact.id,
+            "date": "2026-03-01T10:00:00",
+            "type": "email",
+            "notes": "Test",
+        },
+    )
     assert response.status_code == 403

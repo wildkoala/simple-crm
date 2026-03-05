@@ -1,6 +1,5 @@
 """Tests for auth utility functions."""
 
-import hashlib
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
@@ -17,12 +16,12 @@ from app.auth import (
     generate_password_reset_token,
     get_password_hash,
     hash_api_key,
+    hash_token,
     validate_password,
     verify_password,
     verify_reset_token,
 )
 from app.models.models import User
-from app.auth import hash_token
 from app.utils import generate_id
 
 
@@ -183,8 +182,7 @@ def test_validate_password_empty():
 
 def test_get_user_from_api_key_valid(db):
     """Test get_user_from_api_key with a valid API key."""
-    from app.auth import get_user_from_api_key, hash_api_key, generate_api_key
-    from unittest.mock import MagicMock
+    from app.auth import generate_api_key, get_user_from_api_key, hash_api_key
 
     raw_key = generate_api_key()
     user = User(
@@ -212,7 +210,6 @@ def test_get_user_from_api_key_valid(db):
 def test_get_user_from_api_key_invalid(db):
     """Test get_user_from_api_key with an invalid API key."""
     from app.auth import get_user_from_api_key
-    from unittest.mock import MagicMock
 
     creds = MagicMock()
     creds.credentials = "crm_invalidkey"
@@ -223,7 +220,6 @@ def test_get_user_from_api_key_invalid(db):
 def test_get_user_from_api_key_not_api_key(db):
     """Test get_user_from_api_key with a JWT-style token."""
     from app.auth import get_user_from_api_key
-    from unittest.mock import MagicMock
 
     creds = MagicMock()
     creds.credentials = "some.jwt.token"
@@ -233,8 +229,7 @@ def test_get_user_from_api_key_not_api_key(db):
 
 def test_get_user_from_api_key_inactive_user(db):
     """Inactive user's API key should return None."""
-    from app.auth import get_user_from_api_key, hash_api_key, generate_api_key
-    from unittest.mock import MagicMock
+    from app.auth import generate_api_key, get_user_from_api_key, hash_api_key
 
     raw_key = generate_api_key()
     user = User(
@@ -261,7 +256,6 @@ def test_get_user_from_api_key_inactive_user(db):
 def test_get_user_from_api_key_exception(db):
     """Test get_user_from_api_key handles exceptions gracefully."""
     from app.auth import get_user_from_api_key
-    from unittest.mock import MagicMock
 
     creds = MagicMock()
     creds.credentials = property(lambda self: (_ for _ in ()).throw(Exception("boom")))

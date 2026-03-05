@@ -1,14 +1,20 @@
-import pytest
 from datetime import datetime, timedelta, timezone
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth import (
+    create_access_token,
+    generate_api_key,
+    get_password_hash,
+    hash_api_key,
+)
 from app.database import Base, get_db
 from app.main import app
-from app.models.models import User, Contact, Communication, Contract
-from app.auth import get_password_hash, create_access_token, hash_api_key, generate_api_key
+from app.models.models import Communication, Contact, Contract, User
 from app.utils import generate_id
 
 # In-memory SQLite for tests
@@ -219,6 +225,26 @@ def sample_contract(db) -> Contract:
         deadline=datetime.now(timezone.utc) + timedelta(days=30),
         status="prospective",
         notes="Test notes",
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+    return contract
+
+
+@pytest.fixture
+def sample_contract_owned_by_admin(db, admin_user) -> Contract:
+    """Create a contract owned by admin user."""
+    contract = Contract(
+        id=generate_id(),
+        title="Admin Contract",
+        description="Owned by admin",
+        source="SAM.gov",
+        deadline=datetime.now(timezone.utc) + timedelta(days=30),
+        status="prospective",
+        notes="Admin notes",
+        created_by_user_id=admin_user.id,
         created_at=datetime.now(timezone.utc),
     )
     db.add(contract)

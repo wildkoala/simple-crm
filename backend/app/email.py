@@ -2,8 +2,8 @@ import asyncio
 import logging
 import os
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -19,10 +19,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 async def send_email(
-    to_email: str,
-    subject: str,
-    html_content: str,
-    text_content: Optional[str] = None
+    to_email: str, subject: str, html_content: str, text_content: Optional[str] = None
 ):
     """Send email using SMTP (non-blocking)"""
 
@@ -31,17 +28,17 @@ async def send_email(
         logger.info("[EMAIL] SMTP not configured. Would send email with subject: %s", subject)
         return
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    msg['To'] = to_email
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
 
     # Add text and HTML parts
     if text_content:
-        text_part = MIMEText(text_content, 'plain')
+        text_part = MIMEText(text_content, "plain")
         msg.attach(text_part)
 
-    html_part = MIMEText(html_content, 'html')
+    html_part = MIMEText(html_content, "html")
     msg.attach(html_part)
 
     def _send_sync():
