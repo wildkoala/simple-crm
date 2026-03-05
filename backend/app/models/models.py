@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, Text
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -27,7 +27,7 @@ class Contact(Base):
     status = Column(String(20), nullable=False, index=True)  # cold, warm, hot
     needs_follow_up = Column(Boolean, default=False)
     follow_up_date = Column(DateTime, nullable=True, index=True)
-    notes = Column(String(10000), default="")
+    notes = Column(Text, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -54,7 +54,7 @@ class Communication(Base):
     contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=False, index=True)
     date = Column(DateTime, nullable=False, index=True)
     type = Column(String(20), nullable=False, index=True)  # email, phone, meeting, other
-    notes = Column(String(10000), default="")
+    notes = Column(Text, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -71,7 +71,7 @@ class Contract(Base):
 
     id = Column(String(36), primary_key=True, index=True)
     title = Column(String(300), nullable=False)
-    description = Column(String(50000), default="")
+    description = Column(Text, default="")
     source = Column(String(200), nullable=False)
     deadline = Column(DateTime, nullable=False)
     status = Column(
@@ -79,7 +79,7 @@ class Contract(Base):
     )  # prospective, in progress, submitted, not a good fit
     sam_gov_notice_id = Column(String(255), nullable=True, unique=True, index=True)
     submission_link = Column(String(2048), nullable=True)
-    notes = Column(String(10000), default="")
+    notes = Column(Text, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
