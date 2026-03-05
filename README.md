@@ -1,7 +1,7 @@
 # Simple CRM
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8+-green.svg)
+![Python](https://img.shields.io/badge/python-3.12+-green.svg)
 ![Node](https://img.shields.io/badge/node-18+-green.svg)
 ![React](https://img.shields.io/badge/react-18-61dafb.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5-3178c6.svg)
@@ -34,7 +34,7 @@ Simple CRM is a straightforward customer relationship management system built sp
 
 **Backend:**
 - Python FastAPI framework
-- SQLite database with SQLAlchemy ORM
+- PostgreSQL database with SQLAlchemy ORM
 - JWT token authentication
 - API key authentication for automation
 - Pydantic for data validation
@@ -43,58 +43,81 @@ Simple CRM is a straightforward customer relationship management system built sp
 
 ### Prerequisites
 
-- Node.js 18+ and npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-- Python 3.8+ for the backend
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (recommended)
+- Or for local development: Node.js 18+, Python 3.12+, and a PostgreSQL instance
 
-### Quick Start
+### Deploy with Docker Compose (Recommended)
 
-The easiest way to run the application is using the included development script:
+The easiest way to run the full stack is with Docker Compose. This starts PostgreSQL, the backend API, and the frontend in one command:
 
-**Linux/Mac:**
 ```sh
 git clone https://github.com/pretorin-ai/simple-crm.git
 cd simple-crm
-./scripts/dev.sh
+docker compose up --build
 ```
 
-**Windows:**
+Once the containers are healthy:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **PostgreSQL**: `localhost:5432` (user: `crm`, password: `crm`, database: `crm`)
+
+Press `Ctrl+C` to stop all services. Data is persisted in a Docker volume (`pgdata`).
+
+#### Configuration
+
+Environment variables can be overridden in a `.env` file at the project root or passed directly:
+
+| Variable | Default | Description |
+|---|---|---|
+| `SECRET_KEY` | `change-me-in-production` | JWT signing key |
+| `ENV` | `development` | Set to `production` to disable seed data and debug features |
+| `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warning`, `error`) |
+| `VITE_API_BASE_URL` | `http://localhost:8000` | Backend URL used by the frontend at build time |
+
+Example production deployment:
+
 ```sh
-git clone https://github.com/pretorin-ai/simple-crm.git
-cd simple-crm
-scripts\dev.bat
+SECRET_KEY=your-secure-secret ENV=production docker compose up --build -d
 ```
 
-The script will:
-- Set up Python virtual environment and install backend dependencies
-- Install frontend dependencies
-- Create environment files from examples (if not present)
-- Start both backend and frontend servers
+#### Useful Docker Compose Commands
 
-The frontend will be available at **http://localhost:5173** and the backend API at **http://localhost:8000**.
+```sh
+docker compose up --build -d   # Start in background (rebuild images)
+docker compose logs -f         # Follow all service logs
+docker compose logs -f backend # Follow backend logs only
+docker compose down            # Stop and remove containers
+docker compose down -v         # Stop and remove containers + database volume
+```
 
-Press `Ctrl+C` to stop all services.
+### Local Development Setup (Alternative)
 
-### Manual Setup (Alternative)
+If you prefer to run services directly for development:
 
-If you prefer to run services separately:
+**1. Start PostgreSQL** (or use an existing instance):
+```sh
+docker compose up db -d
+```
 
-**1. Set up and run the backend:**
+**2. Set up and run the backend:**
 ```sh
 cd backend
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
+pip install .
+cp .env.example .env      # Edit .env if your database connection differs
 python run.py
 ```
 
-**2. In a new terminal, set up and run the frontend:**
+**3. In a new terminal, set up and run the frontend:**
 ```sh
 cd frontend
 npm install
 cp .env.local.example .env.local
 npm run dev
 ```
+
+The frontend dev server runs at **http://localhost:5173** and the backend API at **http://localhost:8000**.
 
 ### Default Login
 
@@ -125,48 +148,6 @@ To generate an API key:
 3. Click "Generate API Key"
 4. Store the key securely (it will only be shown once)
 
-### SAM.gov Integration
-
-Simple CRM integrates with the [govbizops](https://github.com/pretorin-ai/govbizops) SAM.gov scraper to automatically import government contract opportunities.
-
-**Using govbizops with Simple CRM:**
-
-1. Set up and run govbizops according to its documentation
-2. Generate an API key in Simple CRM (see above)
-3. Configure govbizops to push opportunities to Simple CRM:
-
-```bash
-# Example: Using curl to import SAM.gov opportunities
-curl -X POST http://localhost:8000/contracts/import/samgov \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "opportunities": [
-      {
-        "noticeId": "abc123xyz",
-        "title": "IT Services for Federal Agency",
-        "solicitationNumber": "RFP-2024-001",
-        "description": "Seeking IT support services...",
-        "responseDeadLine": "2024-12-31T23:59:59Z",
-        "naicsCode": "541512",
-        "uiLink": "https://sam.gov/opp/abc123xyz",
-        "source": "SAM.gov",
-        "pointOfContact": [
-          {
-            "fullName": "John Smith",
-            "email": "john.smith@agency.gov",
-            "phone": "555-0100",
-            "type": "primary"
-          }
-        ]
-      }
-    ],
-    "auto_create_contacts": true
-  }'
-```
-
-The `auto_create_contacts` parameter automatically creates contact records from the point-of-contact information in each opportunity.
-
 ### API Documentation
 
 Once the backend is running, interactive API documentation is available at:
@@ -191,35 +172,38 @@ The backend runs with auto-reload enabled during development. Changes to Python 
 
 To reset the database with fresh example data:
 ```sh
-cd backend
-rm crm.db
-python run.py  # Will recreate database and seed with example data
+docker compose down -v         # Remove the database volume
+docker compose up --build      # Recreate and re-seed
 ```
 
 ### Project Structure
 
 ```
 simple-crm/
+├── docker-compose.yml        # Full-stack deployment
 ├── backend/
+│   ├── Dockerfile            # Backend container image
 │   ├── app/
-│   │   ├── auth.py          # Authentication logic
-│   │   ├── models/          # Database models
-│   │   ├── routers/         # API route handlers
-│   │   └── seed_data.py     # Example data seeder
-│   ├── run.py               # Application entry point
-│   └── requirements.txt     # Python dependencies
+│   │   ├── auth.py           # Authentication logic
+│   │   ├── models/           # Database models
+│   │   ├── routers/          # API route handlers
+│   │   ├── services/         # Shared business logic
+│   │   └── seed_data.py      # Example data seeder
+│   ├── run.py                # Application entry point
+│   └── pyproject.toml        # Python dependencies
 ├── frontend/
+│   ├── Dockerfile            # Frontend container image (multi-stage)
+│   ├── nginx.conf            # Production nginx config
 │   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── contexts/        # React context providers
-│   │   ├── lib/             # Utility functions and API client
-│   │   └── pages/           # Page components
-│   ├── public/              # Static assets
-│   ├── package.json         # Frontend dependencies
-│   └── vite.config.ts       # Vite configuration
+│   │   ├── components/       # React components
+│   │   ├── contexts/         # React context providers
+│   │   ├── lib/              # Utility functions and API client
+│   │   └── pages/            # Page components
+│   ├── package.json          # Frontend dependencies
+│   └── vite.config.ts        # Vite configuration
 └── scripts/
-    ├── dev.sh               # Development launcher (Linux/Mac)
-    └── dev.bat              # Development launcher (Windows)
+    ├── dev.sh                # Development launcher (Linux/Mac)
+    └── dev.bat               # Development launcher (Windows)
 ```
 
 ## Security Notes
