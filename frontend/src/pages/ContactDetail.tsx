@@ -34,6 +34,31 @@ export default function ContactDetail() {
     notes: '',
   });
 
+  const loadUsers = async () => {
+    try {
+      const usersData = await api.getUsers();
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  const loadContact = useCallback(async (contactId: string) => {
+    try {
+      const [contactData, commData] = await Promise.all([
+        api.getContact(contactId),
+        api.getCommunications(contactId)
+      ]);
+      setContact(contactData);
+      setCommunications(commData);
+    } catch (_error) {
+      toast.error('Failed to load contact');
+      navigate('/contacts');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigate]);
+
   useEffect(() => {
     loadUsers();
     if (id === 'new') {
@@ -71,31 +96,6 @@ export default function ContactDetail() {
       loadContact(id);
     }
   }, [id, currentUser, loadContact]);
-
-  const loadUsers = async () => {
-    try {
-      const usersData = await api.getUsers();
-      setUsers(usersData);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-    }
-  };
-
-  const loadContact = useCallback(async (contactId: string) => {
-    try {
-      const [contactData, commData] = await Promise.all([
-        api.getContact(contactId),
-        api.getCommunications(contactId)
-      ]);
-      setContact(contactData);
-      setCommunications(commData);
-    } catch (_error) {
-      toast.error('Failed to load contact');
-      navigate('/contacts');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [navigate]);
 
   const handleSave = async () => {
     if (!editForm.first_name || !editForm.last_name || !editForm.email) {
