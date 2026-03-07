@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ export default function Pipeline() {
   const [metrics, setMetrics] = useState<api.PipelineMetrics | null>(null);
   const [opportunities, setOpportunities] = useState<api.Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const draggedOppId = useRef<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -32,6 +34,66 @@ export default function Pipeline() {
       console.error(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDragStart = (e: DragEvent, oppId: string) => {
+    draggedOppId.current = oppId;
+    e.dataTransfer.effectAllowed = 'move';
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    draggedOppId.current = null;
+    setDragOverStage(null);
+  };
+
+  const handleDragOver = (e: DragEvent, stage: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stage);
+  };
+
+  const handleDragLeave = (e: DragEvent, stage: string) => {
+    const relatedTarget = e.relatedTarget as Node | null;
+    if (e.currentTarget instanceof HTMLElement && !e.currentTarget.contains(relatedTarget)) {
+      setDragOverStage((prev) => (prev === stage ? null : prev));
+    }
+  };
+
+  const handleDrop = async (e: DragEvent, newStage: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    const oppId = draggedOppId.current;
+    if (!oppId) return;
+
+    const opp = opportunities.find((o) => o.id === oppId);
+    if (!opp || opp.stage === newStage) return;
+
+    const oldStage = opp.stage;
+    // Optimistic update
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === oppId ? { ...o, stage: newStage as api.Opportunity['stage'] } : o))
+    );
+
+    try {
+      await api.patchOpportunity(oppId, { stage: newStage });
+      // Refresh metrics after stage change
+      const metricsData = await api.getPipelineMetrics();
+      setMetrics(metricsData);
+      toast.success(`Moved "${opp.title}" to ${newStage}`);
+    } catch (error) {
+      // Revert on failure
+      setOpportunities((prev) =>
+        prev.map((o) => (o.id === oppId ? { ...o, stage: oldStage } : o))
+      );
+      toast.error('Failed to update opportunity stage');
+      console.error(error);
     }
   };
 
@@ -108,8 +170,15 @@ export default function Pipeline() {
               {STAGE_ORDER.map((stage) => {
                 const stageOpps = oppsByStage[stage] || [];
                 const stageValue = stageOpps.reduce((sum, o) => sum + (o.estimated_value || 0), 0);
+                const isOver = dragOverStage === stage;
                 return (
-                  <div key={stage} className="space-y-2">
+                  <div
+                    key={stage}
+                    className={`space-y-2 rounded-lg p-2 transition-colors min-h-[120px] ${isOver ? 'bg-accent/50 ring-2 ring-primary/30' : ''}`}
+                    onDragOver={(e) => handleDragOver(e, stage)}
+                    onDragLeave={(e) => handleDragLeave(e, stage)}
+                    onDrop={(e) => handleDrop(e, stage)}
+                  >
                     <div className="text-center">
                       <Badge variant={getOpportunityStageBadge(stage)} className="mb-1">
                         {stage}
@@ -119,8 +188,14 @@ export default function Pipeline() {
                     </div>
                     <div className="space-y-1">
                       {stageOpps.map((opp) => (
-                        <Link key={opp.id} to={`/opportunities/${opp.id}`}>
-                          <div className="p-2 rounded border border-border hover:bg-accent/50 transition-colors text-xs">
+                        <Link
+                          key={opp.id}
+                          to={`/opportunities/${opp.id}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, opp.id)}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <div className="p-2 rounded border border-border hover:bg-accent/50 transition-colors text-xs cursor-grab active:cursor-grabbing">
                             <p className="font-medium truncate">{opp.title}</p>
                             <p className="text-muted-foreground">{formatCurrency(opp.estimated_value)}</p>
                           </div>
