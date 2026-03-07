@@ -1,17 +1,17 @@
-from datetime import datetime, timedelta
-from app.models.models import Contact, Communication, Contract, User
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+
 from app.auth import get_password_hash
-import uuid
+from app.models.models import Communication, Contact, Contract, User
+from app.utils import generate_id
 
-
-def generate_id():
-    """Generate a unique ID"""
-    return str(uuid.uuid4())
+logger = logging.getLogger(__name__)
 
 
 def get_seed_contacts(user_id):
     """Return seed data for contacts"""
-    base_date = datetime.utcnow()
+    base_date = datetime.now(timezone.utc)
 
     return [
         Contact(
@@ -25,10 +25,13 @@ def get_seed_contacts(user_id):
             status="hot",
             needs_follow_up=True,
             follow_up_date=base_date + timedelta(days=2),  # Due in 2 days
-            notes="Key decision maker for cybersecurity initiatives. Very interested in our compliance automation platform.",
+            notes=(
+                "Key decision maker for cybersecurity initiatives."
+                " Very interested in our compliance automation platform."
+            ),
             created_at=base_date - timedelta(days=30),
             last_contacted_at=base_date - timedelta(days=3),
-            assigned_user_id=user_id
+            assigned_user_id=user_id,
         ),
         Contact(
             id=generate_id(),
@@ -44,7 +47,7 @@ def get_seed_contacts(user_id):
             notes="Software architect interested in our API. Follow up in 2 weeks.",
             created_at=base_date - timedelta(days=45),
             last_contacted_at=base_date - timedelta(days=14),
-            assigned_user_id=user_id
+            assigned_user_id=user_id,
         ),
         Contact(
             id=generate_id(),
@@ -60,7 +63,7 @@ def get_seed_contacts(user_id):
             notes="Procurement officer. Mentioned upcoming RFP for compliance tools.",
             created_at=base_date - timedelta(days=60),
             last_contacted_at=base_date - timedelta(days=7),
-            assigned_user_id=user_id
+            assigned_user_id=user_id,
         ),
         Contact(
             id=generate_id(),
@@ -75,7 +78,7 @@ def get_seed_contacts(user_id):
             notes="Independent consultant. Potential partner for government contracts.",
             created_at=base_date - timedelta(days=90),
             last_contacted_at=None,
-            assigned_user_id=user_id
+            assigned_user_id=user_id,
         ),
         Contact(
             id=generate_id(),
@@ -91,14 +94,14 @@ def get_seed_contacts(user_id):
             notes="CISO - very interested in FedRAMP automation. Schedule demo next week.",
             created_at=base_date - timedelta(days=15),
             last_contacted_at=base_date - timedelta(days=1),
-            assigned_user_id=user_id
+            assigned_user_id=user_id,
         ),
     ]
 
 
 def get_seed_communications(contacts):
     """Return seed data for communications"""
-    base_date = datetime.utcnow()
+    base_date = datetime.now(timezone.utc)
 
     # Assuming first contact is Sarah Johnson
     sarah_id = contacts[0].id if contacts else generate_id()
@@ -112,23 +115,28 @@ def get_seed_communications(contacts):
             date=base_date - timedelta(days=3),
             type="email",
             notes="Sent product demo video and pricing information. Very positive response.",
-            created_at=base_date - timedelta(days=3)
+            created_at=base_date - timedelta(days=3),
         ),
         Communication(
             id=generate_id(),
             contact_id=sarah_id,
             date=base_date - timedelta(days=10),
             type="meeting",
-            notes="Initial discovery call. 45 minutes. Discussed current pain points with compliance processes.",
-            created_at=base_date - timedelta(days=10)
+            notes=(
+                "Initial discovery call. 45 minutes."
+                " Discussed current pain points with compliance processes."
+            ),
+            created_at=base_date - timedelta(days=10),
         ),
         Communication(
             id=generate_id(),
             contact_id=emily_id,
             date=base_date - timedelta(days=7),
             type="phone",
-            notes="15-minute call to clarify RFP requirements. Confirmed we meet all prerequisites.",
-            created_at=base_date - timedelta(days=7)
+            notes=(
+                "15-minute call to clarify RFP requirements. Confirmed we meet all prerequisites."
+            ),
+            created_at=base_date - timedelta(days=7),
         ),
         Communication(
             id=generate_id(),
@@ -136,35 +144,38 @@ def get_seed_communications(contacts):
             date=base_date - timedelta(days=1),
             type="email",
             notes="Shared FedRAMP automation case study. Requested demo for her team.",
-            created_at=base_date - timedelta(days=1)
+            created_at=base_date - timedelta(days=1),
         ),
     ]
 
 
 def get_seed_contracts(contacts):
     """Return seed data for contracts"""
-    base_date = datetime.utcnow()
-
-    sarah_id = contacts[0].id if contacts else generate_id()
-    emily_id = contacts[2].id if len(contacts) > 2 else generate_id()
-    jennifer_id = contacts[4].id if len(contacts) > 4 else generate_id()
+    base_date = datetime.now(timezone.utc)
 
     contracts = [
         Contract(
             id=generate_id(),
             title="DoD Cybersecurity Compliance Automation",
-            description="RFP for automated compliance monitoring and reporting system for DoD networks.",
+            description=(
+                "RFP for automated compliance monitoring and reporting system for DoD networks."
+            ),
             source="SAM.gov",
             deadline=base_date + timedelta(days=30),
             status="in progress",
             submission_link="https://sam.gov/opp/12345",
-            notes="High priority. Working with Sarah Johnson. Need to submit technical approach by next Friday.",
+            notes=(
+                "High priority. Working with Sarah Johnson."
+                " Need to submit technical approach by next Friday."
+            ),
             created_at=base_date - timedelta(days=20),
         ),
         Contract(
             id=generate_id(),
             title="GSA FedRAMP Package Acceleration",
-            description="Tool to streamline FedRAMP authorization package preparation and submission.",
+            description=(
+                "Tool to streamline FedRAMP authorization package preparation and submission."
+            ),
             source="GSA eBuy",
             deadline=base_date + timedelta(days=45),
             status="prospective",
@@ -186,7 +197,9 @@ def get_seed_contracts(contacts):
         Contract(
             id=generate_id(),
             title="Legacy System Migration Support",
-            description="Support services for migrating legacy compliance systems to modern platforms.",
+            description=(
+                "Support services for migrating legacy compliance systems to modern platforms."
+            ),
             source="Private Sector RFP",
             deadline=base_date - timedelta(days=15),
             status="not a good fit",
@@ -205,27 +218,32 @@ def get_seed_contracts(contacts):
 
 
 def get_seed_user():
-    """Return seed user (default credentials: demo@pretorin.com / demo123)"""
+    """Return seed user (default credentials: demo@pretorin.com / demo1234)"""
     return User(
         id=generate_id(),
         email="demo@pretorin.com",
         name="Demo Admin User",
-        hashed_password=get_password_hash("demo123"),
+        hashed_password=get_password_hash("demo1234"),
         role="admin",
         is_active=True,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
     )
 
 
 def seed_database(db):
-    """Seed the database with initial data"""
+    """Seed the database with initial data (development only)"""
+    env = os.getenv("ENV", "development")
+    if env != "development":
+        logger.info("Skipping database seeding in %s environment", env)
+        return
+
     # Check if data already exists
     existing_user = db.query(User).first()
     if existing_user:
-        print("Database already seeded. Skipping...")
+        logger.info("Database already seeded. Skipping...")
         return
 
-    print("Seeding database...")
+    logger.info("Seeding database...")
 
     # Add user
     user = get_seed_user()
@@ -249,5 +267,9 @@ def seed_database(db):
         db.add(contract)
 
     db.commit()
-    print("Database seeded successfully!")
-    print(f"Default user: {user.email} / demo123")
+    logger.info("Database seeded successfully!")
+    logger.warning(
+        "Demo admin account seeded: %s / demo1234. "
+        "Change this password immediately in any non-development environment!",
+        user.email,
+    )

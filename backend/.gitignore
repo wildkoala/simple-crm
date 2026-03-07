@@ -7,12 +7,17 @@ env/
 venv/
 ENV/
 .venv
-# Exclude all database files except example data
+# Exclude all database files
 *.db
-!crm.db
 *.sqlite
 *.sqlite3
 
 # Environment files with secrets (keep .env.example)
 .env
 .DS_Store
+
+# Build artifacts
+dist/
+*.egg-info/
+build/
+.coverage

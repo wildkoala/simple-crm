@@ -1,8 +1,12 @@
+import asyncio
+import logging
 import os
 import smtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # Email configuration from environment
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -11,44 +15,42 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@pretorin.com")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Pretorin CRM")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8080")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 async def send_email(
-    to_email: str,
-    subject: str,
-    html_content: str,
-    text_content: Optional[str] = None
+    to_email: str, subject: str, html_content: str, text_content: Optional[str] = None
 ):
-    """Send email using SMTP"""
+    """Send email using SMTP (non-blocking)"""
 
     # Skip if SMTP not configured (development mode)
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        print(f"[EMAIL] Would send to {to_email}: {subject}")
-        print(f"[EMAIL] Content: {text_content or html_content}")
+        logger.info("[EMAIL] SMTP not configured. Would send email with subject: %s", subject)
         return
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    msg['To'] = to_email
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
 
     # Add text and HTML parts
     if text_content:
-        text_part = MIMEText(text_content, 'plain')
+        text_part = MIMEText(text_content, "plain")
         msg.attach(text_part)
 
-    html_part = MIMEText(html_content, 'html')
+    html_part = MIMEText(html_content, "html")
     msg.attach(html_part)
 
-    # Send email
-    try:
+    def _send_sync():
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
+
+    try:
+        await asyncio.to_thread(_send_sync)
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logger.error("Failed to send email: %s", e)
         raise
 
 
