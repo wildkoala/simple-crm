@@ -553,6 +553,89 @@ export async function deleteOpportunity(id: string): Promise<void> {
   return fetchApi<void>(`/opportunities/${id}`, { method: 'DELETE' });
 }
 
+// Opportunity Timeline API
+export interface OpportunityEvent {
+  id: string;
+  opportunity_id: string;
+  date: string;
+  event_type: 'discovery' | 'contact' | 'rfp_release' | 'proposal_submitted' | 'meeting' | 'stage_change' | 'note' | 'other';
+  description: string;
+  created_by_user_id?: string;
+  created_at: string;
+}
+
+export interface OpportunityEventCreate {
+  opportunity_id: string;
+  date: string;
+  event_type: OpportunityEvent['event_type'];
+  description: string;
+}
+
+export async function getTimeline(opportunityId: string): Promise<OpportunityEvent[]> {
+  return fetchApi<OpportunityEvent[]>(`/opportunities/${opportunityId}/timeline`);
+}
+
+export async function createTimelineEvent(opportunityId: string, event: OpportunityEventCreate): Promise<OpportunityEvent> {
+  return fetchApi<OpportunityEvent>(`/opportunities/${opportunityId}/timeline`, { method: 'POST', body: JSON.stringify(event) });
+}
+
+export async function deleteTimelineEvent(opportunityId: string, eventId: string): Promise<void> {
+  return fetchApi<void>(`/opportunities/${opportunityId}/timeline/${eventId}`, { method: 'DELETE' });
+}
+
+// Capture Notes API
+export interface CaptureNote {
+  id: string;
+  opportunity_id: string;
+  section: 'customer_intel' | 'incumbent' | 'competitors' | 'partners' | 'risks' | 'strategy';
+  content: string;
+  updated_at: string;
+}
+
+export async function getCaptureNotes(opportunityId: string): Promise<CaptureNote[]> {
+  return fetchApi<CaptureNote[]>(`/opportunities/${opportunityId}/capture-notes`);
+}
+
+export async function upsertCaptureNote(opportunityId: string, section: string, content: string): Promise<CaptureNote> {
+  return fetchApi<CaptureNote>(`/opportunities/${opportunityId}/capture-notes/${section}`, { method: 'PUT', body: JSON.stringify({ content }) });
+}
+
+// Attachments API
+export interface AttachmentRecord {
+  id: string;
+  opportunity_id: string;
+  filename: string;
+  content_type?: string;
+  size?: number;
+  uploaded_by_user_id?: string;
+  created_at: string;
+}
+
+export async function getAttachments(opportunityId: string): Promise<AttachmentRecord[]> {
+  return fetchApi<AttachmentRecord[]>(`/opportunities/${opportunityId}/attachments`);
+}
+
+export async function uploadAttachment(opportunityId: string, file: File): Promise<AttachmentRecord> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API_BASE_URL}/opportunities/${opportunityId}/attachments`, {
+    method: 'POST',
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteAttachment(opportunityId: string, attachmentId: string): Promise<void> {
+  return fetchApi<void>(`/opportunities/${opportunityId}/attachments/${attachmentId}`, { method: 'DELETE' });
+}
+
+export function getAttachmentDownloadUrl(opportunityId: string, attachmentId: string): string {
+  return `${API_BASE_URL}/opportunities/${opportunityId}/attachments/${attachmentId}/download`;
+}
+
 // Contract Vehicles API
 export interface ContractVehicle {
   id: string;

@@ -542,6 +542,80 @@ class Compliance(ComplianceBase):
         from_attributes = True
 
 
+# Opportunity Timeline schemas
+OpportunityEventType = Literal[
+    "discovery", "contact", "rfp_release", "proposal_submitted",
+    "meeting", "stage_change", "note", "other"
+]
+
+
+class OpportunityEventCreate(BaseModel):
+    opportunity_id: str
+    date: datetime
+    event_type: OpportunityEventType
+    description: str = Field(min_length=1, max_length=10000)
+
+
+class OpportunityEventUpdate(BaseModel):
+    date: Optional[datetime] = None
+    event_type: Optional[OpportunityEventType] = None
+    description: Optional[str] = Field(default=None, min_length=1, max_length=10000)
+
+
+class OpportunityEvent(BaseModel):
+    id: str
+    opportunity_id: str
+    date: datetime
+    event_type: str
+    description: str
+    created_by_user_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Capture Notes schemas
+CaptureNoteSection = Literal[
+    "customer_intel", "incumbent", "competitors", "partners", "risks", "strategy"
+]
+
+
+class CaptureNoteCreate(BaseModel):
+    opportunity_id: str
+    section: CaptureNoteSection
+    content: str = Field(default="", max_length=50000)
+
+
+class CaptureNoteUpdate(BaseModel):
+    content: str = Field(max_length=50000)
+
+
+class CaptureNote(BaseModel):
+    id: str
+    opportunity_id: str
+    section: str
+    content: str
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Attachment schemas
+class AttachmentSchema(BaseModel):
+    id: str
+    opportunity_id: str
+    filename: str
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+    uploaded_by_user_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Pipeline/Reporting schemas
 class PipelineMetrics(BaseModel):
     total_opportunities: int

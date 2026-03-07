@@ -1,16 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import * as api from '@/lib/api';
 import { getOpportunityStageBadge, formatCurrency, getComplianceStatusBadge, formatCertificationType } from '@/lib/badges';
-import { FileText, AlertCircle, Calendar, Loader2, Clock, Target, DollarSign, TrendingUp, ShieldAlert } from 'lucide-react';
+import { AlertCircle, Calendar, Loader2, Clock, Target, DollarSign, TrendingUp, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const [contracts, setContracts] = useState<api.Contract[]>([]);
+  const navigate = useNavigate();
   const [dueFollowUps, setDueFollowUps] = useState<api.Contact[]>([]);
   const [overdueFollowUps, setOverdueFollowUps] = useState<api.Contact[]>([]);
   const [pipelineMetrics, setPipelineMetrics] = useState<api.PipelineMetrics | null>(null);
@@ -24,15 +23,13 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [contractsData, dueData, overdueData, metricsData, expiringData, oppsData] = await Promise.all([
-        api.getContracts(),
+      const [dueData, overdueData, metricsData, expiringData, oppsData] = await Promise.all([
         api.getDueFollowUps(7),
         api.getOverdueFollowUps(),
         api.getPipelineMetrics().catch(() => null),
         api.getExpiringCertifications(90).catch(() => []),
         api.getOpportunities().catch(() => []),
       ]);
-      setContracts(contractsData);
       setDueFollowUps(dueData);
       setOverdueFollowUps(overdueData);
       setPipelineMetrics(metricsData);
@@ -47,11 +44,6 @@ export default function Dashboard() {
   };
 
   const stats = useMemo(() => {
-    const prospectiveContracts = contracts.filter((c) => c.status === 'prospective');
-    const inProgressContracts = contracts.filter((c) => c.status === 'in progress');
-    const actionableContracts = [...prospectiveContracts, ...inProgressContracts]
-      .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
-
     // Active opportunities (not awarded/lost)
     const activeOpps = opportunities.filter((o) => o.stage !== 'awarded' && o.stage !== 'lost');
 
@@ -59,12 +51,9 @@ export default function Dashboard() {
       totalFollowUps: overdueFollowUps.length + dueFollowUps.length,
       overdueCount: overdueFollowUps.length,
       dueCount: dueFollowUps.length,
-      prospectiveContracts: prospectiveContracts.length,
-      inProgressContracts: inProgressContracts.length,
-      actionableContracts,
       activeOpps,
     };
-  }, [contracts, dueFollowUps, overdueFollowUps, opportunities]);
+  }, [dueFollowUps, overdueFollowUps, opportunities]);
 
   if (isLoading) {
     return (
@@ -90,7 +79,7 @@ export default function Dashboard() {
         <div className="grid gap-4 md:grid-cols-4">
           {pipelineMetrics && (
             <>
-              <Card>
+              <Card className="cursor-pointer transition-colors hover:bg-accent/50" onClick={() => navigate('/pipeline')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -100,7 +89,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">{pipelineMetrics.total_opportunities} total opportunities</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="cursor-pointer transition-colors hover:bg-accent/50" onClick={() => navigate('/pipeline')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Expected Revenue</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -129,7 +118,7 @@ export default function Dashboard() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer transition-colors hover:bg-accent/50" onClick={() => navigate('/opportunities')}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Opportunities</CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
@@ -269,30 +258,8 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Contracts to Action */}
-              {stats.actionableContracts.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-3">Contracts to Action</h4>
-                  <div className="space-y-2">
-                    {stats.actionableContracts.slice(0, 5).map((contract) => (
-                      <Link key={contract.id} to={`/contracts/${contract.id}`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors">
-                        <div className="flex-1">
-                          <p className="font-medium">{contract.title}</p>
-                          <p className="text-sm text-muted-foreground capitalize">{contract.status}</p>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          Deadline: {new Date(contract.deadline).toLocaleDateString()}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {overdueFollowUps.length === 0 &&
                dueFollowUps.length === 0 &&
-               stats.actionableContracts.length === 0 &&
                stats.activeOpps.length === 0 && (
                 <p className="text-center text-muted-foreground py-8">
                   No action items at the moment.
@@ -301,22 +268,6 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Quick Actions */}
-        <div className="flex gap-4 flex-wrap">
-          <Button asChild>
-            <Link to="/opportunities/new">Add Opportunity</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/accounts/new">Add Account</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/contacts/new">Add Contact</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/contracts/new">Add Contract</Link>
-          </Button>
-        </div>
       </div>
     </Layout>
   );

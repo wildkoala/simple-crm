@@ -330,8 +330,9 @@ class TestSAMGovCollectEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["contracts_created"] == 0
-        assert len(data["errors"]) == 1
+        # Opportunities don't require a deadline, import succeeds
+        assert data["contracts_created"] == 1
+        assert len(data["errors"]) == 0
 
     @patch("app.routers.sam_gov.collect_opportunities")
     @patch.dict("os.environ", {"SAM_GOV_API_KEY": "test-key-123"})

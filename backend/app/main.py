@@ -13,7 +13,9 @@ from app.database import SessionLocal, engine
 from app.models.models import Base
 from app.routers import (
     accounts,
+    attachments,
     auth,
+    capture_notes,
     communications,
     compliance,
     contacts,
@@ -23,6 +25,7 @@ from app.routers import (
     proposals,
     sam_gov,
     teaming,
+    timeline,
     users,
     vehicles,
 )
@@ -101,6 +104,9 @@ app.include_router(communications.router)
 app.include_router(contracts.router)
 app.include_router(accounts.router)
 app.include_router(opportunities.router)
+app.include_router(timeline.router)
+app.include_router(capture_notes.router)
+app.include_router(attachments.router)
 app.include_router(vehicles.router)
 app.include_router(teaming.router)
 app.include_router(proposals.router)

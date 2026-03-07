@@ -226,6 +226,16 @@ class Opportunity(Base):
     proposal = relationship(
         "Proposal", back_populates="opportunity", uselist=False, cascade="all, delete-orphan"
     )
+    timeline_events = relationship(
+        "OpportunityEvent", back_populates="opportunity", cascade="all, delete-orphan",
+        order_by="OpportunityEvent.date.desc()",
+    )
+    capture_notes = relationship(
+        "CaptureNote", back_populates="opportunity", cascade="all, delete-orphan"
+    )
+    attachments = relationship(
+        "Attachment", back_populates="opportunity", cascade="all, delete-orphan"
+    )
 
     @property
     def vehicle_ids(self):
@@ -309,6 +319,66 @@ class Proposal(Base):
     proposal_manager = relationship(
         "User", back_populates="managed_proposals", foreign_keys=[proposal_manager_id]
     )
+
+
+class OpportunityEvent(Base):
+    __tablename__ = "opportunity_events"
+
+    id = Column(String(36), primary_key=True, index=True)
+    opportunity_id = Column(
+        String(36), ForeignKey("opportunities.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    date = Column(DateTime, nullable=False)
+    event_type = Column(
+        String(30), nullable=False
+    )  # discovery, contact, rfp_release, proposal_submitted, meeting, stage_change, note, other
+    description = Column(Text, nullable=False)
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    opportunity = relationship("Opportunity", back_populates="timeline_events")
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
+
+
+class CaptureNote(Base):
+    __tablename__ = "capture_notes"
+
+    id = Column(String(36), primary_key=True, index=True)
+    opportunity_id = Column(
+        String(36), ForeignKey("opportunities.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    section = Column(
+        String(30), nullable=False
+    )  # customer_intel, incumbent, competitors, partners, risks, strategy
+    content = Column(Text, default="")
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    opportunity = relationship("Opportunity", back_populates="capture_notes")
+
+
+class Attachment(Base):
+    __tablename__ = "attachments"
+
+    id = Column(String(36), primary_key=True, index=True)
+    opportunity_id = Column(
+        String(36), ForeignKey("opportunities.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename = Column(String(500), nullable=False)
+    stored_filename = Column(String(100), nullable=False, unique=True)
+    content_type = Column(String(200), nullable=True)
+    size = Column(Integer, nullable=True)
+    uploaded_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    opportunity = relationship("Opportunity", back_populates="attachments")
+    uploaded_by_user = relationship("User", foreign_keys=[uploaded_by_user_id])
 
 
 class Compliance(Base):
