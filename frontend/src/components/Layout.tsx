@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, LogOut, Shield, Key } from 'lucide-react';
+import { Home, Users, FileText, LogOut, Shield, Key, Target, Building2, FileStack, ShieldCheck, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
@@ -9,8 +9,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Home },
+    { path: '/pipeline', label: 'Pipeline', icon: BarChart3 },
+    { path: '/opportunities', label: 'Opportunities', icon: Target },
+    { path: '/accounts', label: 'Accounts', icon: Building2 },
     { path: '/contacts', label: 'Contacts', icon: Users },
     { path: '/contracts', label: 'Contracts', icon: FileText },
+    { path: '/vehicles', label: 'Vehicles', icon: FileStack },
+    { path: '/compliance', label: 'Compliance', icon: ShieldCheck },
     { path: '/api-settings', label: 'API', icon: Key },
   ];
 
@@ -52,15 +57,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Navigation */}
       <nav className="border-b border-border bg-muted/30">
         <div className="container mx-auto px-4">
-          <ul className="flex gap-1">
+          <ul className="flex gap-1 overflow-x-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
+              const isActive = location.pathname === item.path ||
+                (item.path !== '/dashboard' && item.path !== '/pipeline' && location.pathname.startsWith(item.path));
               return (
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                       isActive
                         ? 'border-b-2 border-primary text-foreground'
                         : 'text-muted-foreground hover:text-foreground'

@@ -12,13 +12,19 @@ from slowapi.util import get_remote_address
 from app.database import SessionLocal, engine
 from app.models.models import Base
 from app.routers import (
+    accounts,
     auth,
     communications,
+    compliance,
     contacts,
     contacts_followup,
     contracts,
+    opportunities,
+    proposals,
     sam_gov,
+    teaming,
     users,
+    vehicles,
 )
 from app.seed_data import seed_database
 
@@ -93,6 +99,12 @@ app.include_router(contacts_followup.router)
 app.include_router(contacts.router)
 app.include_router(communications.router)
 app.include_router(contracts.router)
+app.include_router(accounts.router)
+app.include_router(opportunities.router)
+app.include_router(vehicles.router)
+app.include_router(teaming.router)
+app.include_router(proposals.router)
+app.include_router(compliance.router)
 app.include_router(sam_gov.router)
 app.include_router(users.router)
 

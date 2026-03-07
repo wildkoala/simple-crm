@@ -392,3 +392,322 @@ export async function revokeApiKey(): Promise<{ message: string }> {
 export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
   return fetchApi<ApiKeyStatus>('/users/me/api-key/status');
 }
+
+// Accounts API
+export interface Account {
+  id: string;
+  name: string;
+  account_type: 'government_agency' | 'prime_contractor' | 'subcontractor' | 'partner' | 'vendor';
+  parent_agency?: string;
+  office?: string;
+  location?: string;
+  website?: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountCreate {
+  name: string;
+  account_type: Account['account_type'];
+  parent_agency?: string;
+  office?: string;
+  location?: string;
+  website?: string;
+  notes: string;
+}
+
+export async function getAccounts(accountType?: string): Promise<Account[]> {
+  const params = new URLSearchParams();
+  if (accountType) params.set('account_type', accountType);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<Account[]>(`/accounts${query}`);
+}
+
+export async function getAccount(id: string): Promise<Account> {
+  return fetchApi<Account>(`/accounts/${id}`);
+}
+
+export async function createAccount(account: AccountCreate): Promise<Account> {
+  return fetchApi<Account>('/accounts', { method: 'POST', body: JSON.stringify(account) });
+}
+
+export async function updateAccount(id: string, account: AccountCreate): Promise<Account> {
+  return fetchApi<Account>(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(account) });
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  return fetchApi<void>(`/accounts/${id}`, { method: 'DELETE' });
+}
+
+// Opportunities API
+export interface VehicleBrief {
+  id: string;
+  name: string;
+}
+
+export interface Opportunity {
+  id: string;
+  title: string;
+  agency?: string;
+  account_id?: string;
+  naics_code?: string;
+  set_aside_type?: 'small_business' | '8a' | 'hubzone' | 'wosb' | 'sdvosb' | 'full_and_open' | 'none';
+  estimated_value?: number;
+  solicitation_number?: string;
+  source?: 'sam_gov' | 'agency_forecast' | 'incumbent_recompete' | 'partner_referral' | 'internal';
+  stage: 'identified' | 'qualified' | 'capture' | 'teaming' | 'proposal' | 'submitted' | 'awarded' | 'lost';
+  capture_manager_id?: string;
+  expected_release_date?: string;
+  proposal_due_date?: string;
+  award_date_estimate?: string;
+  win_probability?: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id?: string;
+  vehicle_ids: string[];
+  vehicles: VehicleBrief[];
+}
+
+export interface OpportunityCreate {
+  title: string;
+  agency?: string;
+  account_id?: string;
+  naics_code?: string;
+  set_aside_type?: Opportunity['set_aside_type'];
+  estimated_value?: number;
+  solicitation_number?: string;
+  source?: Opportunity['source'];
+  stage: Opportunity['stage'];
+  capture_manager_id?: string;
+  expected_release_date?: string;
+  proposal_due_date?: string;
+  award_date_estimate?: string;
+  win_probability?: number;
+  notes: string;
+  vehicle_ids: string[];
+}
+
+export interface PipelineMetrics {
+  total_opportunities: number;
+  pipeline_value: number;
+  expected_award_revenue: number;
+  win_rate: number;
+  average_deal_size: number;
+  by_stage: Record<string, { count: number; value: number }>;
+  by_agency: Record<string, { count: number; value: number }>;
+}
+
+export async function getOpportunities(filters?: {
+  stage?: string;
+  agency?: string;
+  naics_code?: string;
+  set_aside_type?: string;
+  source?: string;
+  search?: string;
+  min_value?: number;
+  max_value?: number;
+}): Promise<Opportunity[]> {
+  const params = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.set(key, String(value));
+    });
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<Opportunity[]>(`/opportunities${query}`);
+}
+
+export async function getOpportunity(id: string): Promise<Opportunity> {
+  return fetchApi<Opportunity>(`/opportunities/${id}`);
+}
+
+export async function getPipelineMetrics(): Promise<PipelineMetrics> {
+  return fetchApi<PipelineMetrics>('/opportunities/pipeline');
+}
+
+export async function createOpportunity(opp: OpportunityCreate): Promise<Opportunity> {
+  return fetchApi<Opportunity>('/opportunities', { method: 'POST', body: JSON.stringify(opp) });
+}
+
+export async function updateOpportunity(id: string, opp: OpportunityCreate): Promise<Opportunity> {
+  return fetchApi<Opportunity>(`/opportunities/${id}`, { method: 'PUT', body: JSON.stringify(opp) });
+}
+
+export async function patchOpportunity(id: string, updates: Partial<OpportunityCreate>): Promise<Opportunity> {
+  return fetchApi<Opportunity>(`/opportunities/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
+}
+
+export async function deleteOpportunity(id: string): Promise<void> {
+  return fetchApi<void>(`/opportunities/${id}`, { method: 'DELETE' });
+}
+
+// Contract Vehicles API
+export interface ContractVehicle {
+  id: string;
+  name: string;
+  agency?: string;
+  contract_number?: string;
+  expiration_date?: string;
+  ceiling_value?: number;
+  prime_or_sub?: 'prime' | 'sub';
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractVehicleCreate {
+  name: string;
+  agency?: string;
+  contract_number?: string;
+  expiration_date?: string;
+  ceiling_value?: number;
+  prime_or_sub?: 'prime' | 'sub';
+  notes: string;
+}
+
+export async function getVehicles(): Promise<ContractVehicle[]> {
+  return fetchApi<ContractVehicle[]>('/vehicles');
+}
+
+export async function getVehicle(id: string): Promise<ContractVehicle> {
+  return fetchApi<ContractVehicle>(`/vehicles/${id}`);
+}
+
+export async function createVehicle(vehicle: ContractVehicleCreate): Promise<ContractVehicle> {
+  return fetchApi<ContractVehicle>('/vehicles', { method: 'POST', body: JSON.stringify(vehicle) });
+}
+
+export async function updateVehicle(id: string, vehicle: ContractVehicleCreate): Promise<ContractVehicle> {
+  return fetchApi<ContractVehicle>(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(vehicle) });
+}
+
+export async function deleteVehicle(id: string): Promise<void> {
+  return fetchApi<void>(`/vehicles/${id}`, { method: 'DELETE' });
+}
+
+// Teaming API
+export interface AccountBrief {
+  id: string;
+  name: string;
+  account_type: string;
+}
+
+export interface TeamingRecord {
+  id: string;
+  opportunity_id: string;
+  partner_account_id: string;
+  role: 'prime' | 'subcontractor' | 'jv_partner';
+  status: 'potential' | 'nda_signed' | 'teaming_agreed' | 'active' | 'inactive';
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  partner_account?: AccountBrief;
+}
+
+export interface TeamingCreate {
+  opportunity_id: string;
+  partner_account_id: string;
+  role: TeamingRecord['role'];
+  status: TeamingRecord['status'];
+  notes: string;
+}
+
+export async function getTeamingRecords(opportunityId?: string): Promise<TeamingRecord[]> {
+  const params = new URLSearchParams();
+  if (opportunityId) params.set('opportunity_id', opportunityId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<TeamingRecord[]>(`/teaming${query}`);
+}
+
+export async function createTeaming(teaming: TeamingCreate): Promise<TeamingRecord> {
+  return fetchApi<TeamingRecord>('/teaming', { method: 'POST', body: JSON.stringify(teaming) });
+}
+
+export async function deleteTeaming(id: string): Promise<void> {
+  return fetchApi<void>(`/teaming/${id}`, { method: 'DELETE' });
+}
+
+// Proposals API
+export interface Proposal {
+  id: string;
+  opportunity_id: string;
+  proposal_manager_id?: string;
+  submission_type?: 'full' | 'partial' | 'draft';
+  submission_deadline?: string;
+  status: 'not_started' | 'in_progress' | 'review' | 'final' | 'submitted';
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProposalCreate {
+  opportunity_id: string;
+  proposal_manager_id?: string;
+  submission_type?: Proposal['submission_type'];
+  submission_deadline?: string;
+  status: Proposal['status'];
+  notes: string;
+}
+
+export async function getProposals(opportunityId?: string): Promise<Proposal[]> {
+  const params = new URLSearchParams();
+  if (opportunityId) params.set('opportunity_id', opportunityId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return fetchApi<Proposal[]>(`/proposals${query}`);
+}
+
+export async function createProposal(proposal: ProposalCreate): Promise<Proposal> {
+  return fetchApi<Proposal>('/proposals', { method: 'POST', body: JSON.stringify(proposal) });
+}
+
+export async function patchProposal(id: string, updates: Partial<ProposalCreate>): Promise<Proposal> {
+  return fetchApi<Proposal>(`/proposals/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
+}
+
+export async function deleteProposal(id: string): Promise<void> {
+  return fetchApi<void>(`/proposals/${id}`, { method: 'DELETE' });
+}
+
+// Compliance API
+export interface ComplianceRecord {
+  id: string;
+  certification_type: 'small_business' | '8a' | 'hubzone' | 'wosb' | 'sdvosb' | 'edwosb';
+  issued_by?: string;
+  issue_date?: string;
+  expiration_date?: string;
+  status: 'active' | 'expiring_soon' | 'expired' | 'pending';
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceCreate {
+  certification_type: ComplianceRecord['certification_type'];
+  issued_by?: string;
+  issue_date?: string;
+  expiration_date?: string;
+  status: ComplianceRecord['status'];
+  notes: string;
+}
+
+export async function getComplianceRecords(): Promise<ComplianceRecord[]> {
+  return fetchApi<ComplianceRecord[]>('/compliance');
+}
+
+export async function getExpiringCertifications(daysAhead: number = 90): Promise<ComplianceRecord[]> {
+  return fetchApi<ComplianceRecord[]>(`/compliance/expiring?days_ahead=${daysAhead}`);
+}
+
+export async function createCompliance(record: ComplianceCreate): Promise<ComplianceRecord> {
+  return fetchApi<ComplianceRecord>('/compliance', { method: 'POST', body: JSON.stringify(record) });
+}
+
+export async function updateCompliance(id: string, record: ComplianceCreate): Promise<ComplianceRecord> {
+  return fetchApi<ComplianceRecord>(`/compliance/${id}`, { method: 'PUT', body: JSON.stringify(record) });
+}
+
+export async function deleteCompliance(id: string): Promise<void> {
+  return fetchApi<void>(`/compliance/${id}`, { method: 'DELETE' });
+}

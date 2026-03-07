@@ -3,6 +3,57 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
+# Account schemas
+AccountType = Literal[
+    "government_agency", "prime_contractor", "subcontractor", "partner", "vendor"
+]
+
+
+class AccountBase(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    account_type: AccountType
+    parent_agency: Optional[str] = Field(default=None, max_length=300)
+    office: Optional[str] = Field(default=None, max_length=300)
+    location: Optional[str] = Field(default=None, max_length=300)
+    website: Optional[str] = Field(default=None, max_length=2048)
+    notes: str = Field(default="", max_length=10000)
+
+
+class AccountCreate(AccountBase):
+    pass
+
+
+class AccountUpdate(AccountBase):
+    pass
+
+
+class AccountPatch(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    account_type: Optional[AccountType] = None
+    parent_agency: Optional[str] = Field(default=None, max_length=300)
+    office: Optional[str] = Field(default=None, max_length=300)
+    location: Optional[str] = Field(default=None, max_length=300)
+    website: Optional[str] = Field(default=None, max_length=2048)
+    notes: Optional[str] = Field(default=None, max_length=10000)
+
+
+class AccountBrief(BaseModel):
+    id: str
+    name: str
+    account_type: str
+
+    class Config:
+        from_attributes = True
+
+
+class Account(AccountBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 
 # Contact schemas
 class ContactBase(BaseModel):
@@ -20,11 +71,17 @@ class ContactBase(BaseModel):
 
 class ContactCreate(ContactBase):
     assigned_user_id: Optional[str] = None
+    account_id: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    relationship_strength: Optional[str] = None
 
 
 class ContactUpdate(ContactBase):
     last_contacted_at: Optional[datetime] = None
     assigned_user_id: str
+    account_id: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    relationship_strength: Optional[str] = None
 
 
 class ContactPatch(BaseModel):
@@ -40,6 +97,9 @@ class ContactPatch(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=10000)
     last_contacted_at: Optional[datetime] = None
     assigned_user_id: Optional[str] = None
+    account_id: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    relationship_strength: Optional[str] = None
 
 
 class ContactBrief(BaseModel):
@@ -57,6 +117,9 @@ class Contact(ContactBase):
     last_contacted_at: Optional[datetime] = None
     assigned_user_id: str
     assigned_user: Optional["User"] = None
+    account_id: Optional[str] = None
+    title: Optional[str] = None
+    relationship_strength: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -234,3 +297,247 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+# Opportunity schemas
+OpportunityStage = Literal[
+    "identified", "qualified", "capture", "teaming", "proposal", "submitted", "awarded", "lost"
+]
+SetAsideType = Literal[
+    "small_business", "8a", "hubzone", "wosb", "sdvosb", "full_and_open", "none"
+]
+OpportunitySource = Literal[
+    "sam_gov", "agency_forecast", "incumbent_recompete", "partner_referral", "internal"
+]
+
+
+class OpportunityBase(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    agency: Optional[str] = Field(default=None, max_length=300)
+    account_id: Optional[str] = None
+    naics_code: Optional[str] = Field(default=None, max_length=20)
+    set_aside_type: Optional[SetAsideType] = None
+    estimated_value: Optional[float] = None
+    solicitation_number: Optional[str] = Field(default=None, max_length=255)
+    source: Optional[OpportunitySource] = None
+    stage: OpportunityStage = "identified"
+    capture_manager_id: Optional[str] = None
+    expected_release_date: Optional[datetime] = None
+    proposal_due_date: Optional[datetime] = None
+    award_date_estimate: Optional[datetime] = None
+    win_probability: Optional[int] = Field(default=None, ge=0, le=100)
+    notes: str = Field(default="", max_length=10000)
+
+
+class OpportunityCreate(OpportunityBase):
+    vehicle_ids: List[str] = []
+
+
+class OpportunityUpdate(OpportunityBase):
+    vehicle_ids: List[str] = []
+
+
+class OpportunityPatch(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    agency: Optional[str] = Field(default=None, max_length=300)
+    account_id: Optional[str] = None
+    naics_code: Optional[str] = Field(default=None, max_length=20)
+    set_aside_type: Optional[SetAsideType] = None
+    estimated_value: Optional[float] = None
+    solicitation_number: Optional[str] = Field(default=None, max_length=255)
+    source: Optional[OpportunitySource] = None
+    stage: Optional[OpportunityStage] = None
+    capture_manager_id: Optional[str] = None
+    expected_release_date: Optional[datetime] = None
+    proposal_due_date: Optional[datetime] = None
+    award_date_estimate: Optional[datetime] = None
+    win_probability: Optional[int] = Field(default=None, ge=0, le=100)
+    notes: Optional[str] = Field(default=None, max_length=10000)
+    vehicle_ids: Optional[List[str]] = None
+
+
+class VehicleBrief(BaseModel):
+    id: str
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class Opportunity(OpportunityBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    created_by_user_id: Optional[str] = None
+    vehicle_ids: List[str] = []
+    vehicles: List[VehicleBrief] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Contract Vehicle schemas
+class ContractVehicleBase(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    agency: Optional[str] = Field(default=None, max_length=300)
+    contract_number: Optional[str] = Field(default=None, max_length=255)
+    expiration_date: Optional[datetime] = None
+    ceiling_value: Optional[float] = None
+    prime_or_sub: Optional[Literal["prime", "sub"]] = None
+    notes: str = Field(default="", max_length=10000)
+
+
+class ContractVehicleCreate(ContractVehicleBase):
+    pass
+
+
+class ContractVehicleUpdate(ContractVehicleBase):
+    pass
+
+
+class ContractVehiclePatch(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    agency: Optional[str] = Field(default=None, max_length=300)
+    contract_number: Optional[str] = Field(default=None, max_length=255)
+    expiration_date: Optional[datetime] = None
+    ceiling_value: Optional[float] = None
+    prime_or_sub: Optional[Literal["prime", "sub"]] = None
+    notes: Optional[str] = Field(default=None, max_length=10000)
+
+
+class ContractVehicle(ContractVehicleBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Teaming schemas
+TeamingRole = Literal["prime", "subcontractor", "jv_partner"]
+TeamingStatus = Literal["potential", "nda_signed", "teaming_agreed", "active", "inactive"]
+
+
+class TeamingBase(BaseModel):
+    opportunity_id: str
+    partner_account_id: str
+    role: TeamingRole
+    status: TeamingStatus = "potential"
+    notes: str = Field(default="", max_length=10000)
+
+
+class TeamingCreate(TeamingBase):
+    pass
+
+
+class TeamingUpdate(TeamingBase):
+    pass
+
+
+class TeamingPatch(BaseModel):
+    role: Optional[TeamingRole] = None
+    status: Optional[TeamingStatus] = None
+    notes: Optional[str] = Field(default=None, max_length=10000)
+
+
+class Teaming(TeamingBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    partner_account: Optional[AccountBrief] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Proposal schemas
+ProposalStatus = Literal["not_started", "in_progress", "review", "final", "submitted"]
+SubmissionType = Literal["full", "partial", "draft"]
+
+
+class ProposalBase(BaseModel):
+    opportunity_id: str
+    proposal_manager_id: Optional[str] = None
+    submission_type: Optional[SubmissionType] = None
+    submission_deadline: Optional[datetime] = None
+    status: ProposalStatus = "not_started"
+    notes: str = Field(default="", max_length=10000)
+
+
+class ProposalCreate(ProposalBase):
+    pass
+
+
+class ProposalUpdate(ProposalBase):
+    pass
+
+
+class ProposalPatch(BaseModel):
+    proposal_manager_id: Optional[str] = None
+    submission_type: Optional[SubmissionType] = None
+    submission_deadline: Optional[datetime] = None
+    status: Optional[ProposalStatus] = None
+    notes: Optional[str] = Field(default=None, max_length=10000)
+
+
+class Proposal(ProposalBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Compliance schemas
+CertificationType = Literal[
+    "small_business", "8a", "hubzone", "wosb", "sdvosb", "edwosb"
+]
+ComplianceStatus = Literal["active", "expiring_soon", "expired", "pending"]
+
+
+class ComplianceBase(BaseModel):
+    certification_type: CertificationType
+    issued_by: Optional[str] = Field(default=None, max_length=300)
+    issue_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
+    status: ComplianceStatus = "active"
+    notes: str = Field(default="", max_length=10000)
+
+
+class ComplianceCreate(ComplianceBase):
+    pass
+
+
+class ComplianceUpdate(ComplianceBase):
+    pass
+
+
+class CompliancePatch(BaseModel):
+    certification_type: Optional[CertificationType] = None
+    issued_by: Optional[str] = Field(default=None, max_length=300)
+    issue_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
+    status: Optional[ComplianceStatus] = None
+    notes: Optional[str] = Field(default=None, max_length=10000)
+
+
+class Compliance(ComplianceBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Pipeline/Reporting schemas
+class PipelineMetrics(BaseModel):
+    total_opportunities: int
+    pipeline_value: float
+    expected_award_revenue: float
+    win_rate: float
+    average_deal_size: float
+    by_stage: dict
+    by_agency: dict
