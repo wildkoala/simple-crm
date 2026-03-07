@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import * as api from '@/lib/api';
 import { getOpportunityStageBadge, formatCurrency, formatSetAside } from '@/lib/badges';
@@ -19,7 +20,8 @@ const SET_ASIDES = ['small_business', '8a', 'hubzone', 'wosb', 'sdvosb', 'full_a
 const SOURCES = ['sam_gov', 'agency_forecast', 'incumbent_recompete', 'partner_referral', 'internal'] as const;
 
 const emptyOpp: api.Opportunity = {
-  id: '', title: '', agency: '', naics_code: '', stage: 'identified',
+  id: '', title: '', is_government_contract: false, description: '',
+  agency: '', naics_code: '', stage: 'identified',
   notes: '', created_at: '', updated_at: '', vehicle_ids: [], vehicles: [],
   estimated_value: undefined, win_probability: undefined,
 };
@@ -63,12 +65,17 @@ export default function OpportunityDetail() {
     try {
       const data: api.OpportunityCreate = {
         title: editForm.title,
+        is_government_contract: editForm.is_government_contract,
+        description: editForm.description,
         agency: editForm.agency || undefined,
         account_id: editForm.account_id || undefined,
         naics_code: editForm.naics_code || undefined,
         set_aside_type: editForm.set_aside_type || undefined,
         estimated_value: editForm.estimated_value || undefined,
         solicitation_number: editForm.solicitation_number || undefined,
+        sam_gov_notice_id: editForm.sam_gov_notice_id || undefined,
+        submission_link: editForm.submission_link || undefined,
+        deadline: editForm.deadline || undefined,
         source: editForm.source || undefined,
         stage: editForm.stage,
         capture_manager_id: editForm.capture_manager_id || undefined,
@@ -170,41 +177,29 @@ export default function OpportunityDetail() {
                   <Label>Title</Label>
                   <Input value={editForm!.title} onChange={(e) => setEditForm({ ...editForm!, title: e.target.value })} placeholder="Opportunity title" />
                 </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                  <Switch
+                    id="gov-contract"
+                    checked={editForm!.is_government_contract}
+                    onCheckedChange={(checked) => setEditForm({ ...editForm!, is_government_contract: checked })}
+                  />
+                  <Label htmlFor="gov-contract" className="cursor-pointer">Government Contract</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea value={editForm!.description} onChange={(e) => setEditForm({ ...editForm!, description: e.target.value })} rows={3} placeholder="Describe the opportunity..." />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Agency</Label>
                     <Input value={editForm!.agency || ''} onChange={(e) => setEditForm({ ...editForm!, agency: e.target.value })} placeholder="e.g., Department of Defense" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Solicitation Number</Label>
-                    <Input value={editForm!.solicitation_number || ''} onChange={(e) => setEditForm({ ...editForm!, solicitation_number: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
                     <Label>Stage</Label>
                     <Select value={editForm!.stage} onValueChange={(v) => setEditForm({ ...editForm!, stage: v as api.Opportunity['stage'] })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {STAGES.map((s) => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Set-Aside Type</Label>
-                    <Select value={editForm!.set_aside_type || 'none'} onValueChange={(v) => setEditForm({ ...editForm!, set_aside_type: v as api.Opportunity['set_aside_type'] })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {SET_ASIDES.map((s) => <SelectItem key={s} value={s}>{formatSetAside(s)}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Source</Label>
-                    <Select value={editForm!.source || 'internal'} onValueChange={(v) => setEditForm({ ...editForm!, source: v as api.Opportunity['source'] })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {SOURCES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -219,24 +214,71 @@ export default function OpportunityDetail() {
                     <Input type="number" min="0" max="100" value={editForm!.win_probability ?? ''} onChange={(e) => setEditForm({ ...editForm!, win_probability: e.target.value ? Number(e.target.value) : undefined })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>NAICS Code</Label>
-                    <Input value={editForm!.naics_code || ''} onChange={(e) => setEditForm({ ...editForm!, naics_code: e.target.value })} />
+                    <Label>Source</Label>
+                    <Select value={editForm!.source || 'internal'} onValueChange={(v) => setEditForm({ ...editForm!, source: v as api.Opportunity['source'] })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {SOURCES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Expected Release Date</Label>
-                    <Input type="date" value={editForm!.expected_release_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, expected_release_date: e.target.value || undefined })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Proposal Due Date</Label>
-                    <Input type="date" value={editForm!.proposal_due_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, proposal_due_date: e.target.value || undefined })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Award Date Estimate</Label>
-                    <Input type="date" value={editForm!.award_date_estimate?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, award_date_estimate: e.target.value || undefined })} />
-                  </div>
-                </div>
+                {editForm!.is_government_contract && (
+                  <>
+                    <div className="border-t border-border pt-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-4">Government Contract Fields</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Solicitation Number</Label>
+                        <Input value={editForm!.solicitation_number || ''} onChange={(e) => setEditForm({ ...editForm!, solicitation_number: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>SAM.gov Notice ID</Label>
+                        <Input value={editForm!.sam_gov_notice_id || ''} onChange={(e) => setEditForm({ ...editForm!, sam_gov_notice_id: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>NAICS Code</Label>
+                        <Input value={editForm!.naics_code || ''} onChange={(e) => setEditForm({ ...editForm!, naics_code: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Set-Aside Type</Label>
+                        <Select value={editForm!.set_aside_type || 'none'} onValueChange={(v) => setEditForm({ ...editForm!, set_aside_type: v as api.Opportunity['set_aside_type'] })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {SET_ASIDES.map((s) => <SelectItem key={s} value={s}>{formatSetAside(s)}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Submission Link</Label>
+                        <Input value={editForm!.submission_link || ''} onChange={(e) => setEditForm({ ...editForm!, submission_link: e.target.value })} placeholder="https://..." />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Deadline</Label>
+                        <Input type="date" value={editForm!.deadline?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, deadline: e.target.value || undefined })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Expected Release Date</Label>
+                        <Input type="date" value={editForm!.expected_release_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, expected_release_date: e.target.value || undefined })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Proposal Due Date</Label>
+                        <Input type="date" value={editForm!.proposal_due_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, proposal_due_date: e.target.value || undefined })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Award Date Estimate</Label>
+                        <Input type="date" value={editForm!.award_date_estimate?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, award_date_estimate: e.target.value || undefined })} />
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2">
                   <Label>Notes</Label>
                   <Textarea value={editForm!.notes} onChange={(e) => setEditForm({ ...editForm!, notes: e.target.value })} rows={4} />
@@ -244,53 +286,89 @@ export default function OpportunityDetail() {
               </>
             ) : (
               <>
+                {display.is_government_contract && (
+                  <div className="mb-2">
+                    <Badge variant="outline">Government Contract</Badge>
+                  </div>
+                )}
+                {display.description && (
+                  <div>
+                    <Label className="text-muted-foreground">Description</Label>
+                    <p className="mt-1 whitespace-pre-wrap">{display.description}</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label className="text-muted-foreground">Agency</Label>
                     <p className="mt-1">{display.agency || 'Not specified'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Solicitation Number</Label>
-                    <p className="mt-1">{display.solicitation_number || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-6">
-                  <div>
                     <Label className="text-muted-foreground">Estimated Value</Label>
                     <p className="mt-1 font-semibold text-lg">{formatCurrency(display.estimated_value)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Win Probability</Label>
-                    <p className="mt-1 font-semibold">{display.win_probability !== undefined && display.win_probability !== null ? `${display.win_probability}%` : 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Set-Aside</Label>
-                    <p className="mt-1">{formatSetAside(display.set_aside_type)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">NAICS</Label>
-                    <p className="mt-1">{display.naics_code || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-6">
                   <div>
-                    <Label className="text-muted-foreground">Expected Release</Label>
-                    <p className="mt-1">{display.expected_release_date ? new Date(display.expected_release_date).toLocaleDateString() : 'N/A'}</p>
+                    <Label className="text-muted-foreground">Win Probability</Label>
+                    <p className="mt-1 font-semibold">{display.win_probability !== undefined && display.win_probability !== null ? `${display.win_probability}%` : 'N/A'}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Proposal Due</Label>
-                    <p className="mt-1 font-medium">{display.proposal_due_date ? new Date(display.proposal_due_date).toLocaleDateString() : 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Award Estimate</Label>
-                    <p className="mt-1">{display.award_date_estimate ? new Date(display.award_date_estimate).toLocaleDateString() : 'N/A'}</p>
-                  </div>
+                  {display.source && (
+                    <div>
+                      <Label className="text-muted-foreground">Source</Label>
+                      <p className="mt-1">{display.source.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
                 </div>
-                {display.source && (
-                  <div>
-                    <Label className="text-muted-foreground">Source</Label>
-                    <p className="mt-1">{display.source.replace(/_/g, ' ')}</p>
-                  </div>
+                {display.is_government_contract && (
+                  <>
+                    <div className="border-t border-border pt-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-4">Government Contract Details</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-6">
+                      <div>
+                        <Label className="text-muted-foreground">Solicitation Number</Label>
+                        <p className="mt-1">{display.solicitation_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">SAM.gov Notice ID</Label>
+                        <p className="mt-1">{display.sam_gov_notice_id || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">NAICS</Label>
+                        <p className="mt-1">{display.naics_code || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-muted-foreground">Set-Aside</Label>
+                        <p className="mt-1">{formatSetAside(display.set_aside_type)}</p>
+                      </div>
+                      {display.submission_link && (
+                        <div>
+                          <Label className="text-muted-foreground">Submission Link</Label>
+                          <p className="mt-1"><a href={display.submission_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{display.submission_link}</a></p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-6">
+                      <div>
+                        <Label className="text-muted-foreground">Deadline</Label>
+                        <p className="mt-1">{display.deadline ? new Date(display.deadline).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Expected Release</Label>
+                        <p className="mt-1">{display.expected_release_date ? new Date(display.expected_release_date).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Proposal Due</Label>
+                        <p className="mt-1 font-medium">{display.proposal_due_date ? new Date(display.proposal_due_date).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Award Estimate</Label>
+                        <p className="mt-1">{display.award_date_estimate ? new Date(display.award_date_estimate).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                    </div>
+                  </>
                 )}
                 {display.vehicles && display.vehicles.length > 0 && (
                   <div>

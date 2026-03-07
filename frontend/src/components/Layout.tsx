@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, LogOut, Shield, Key, Target, Building2, FileStack, ShieldCheck, BarChart3 } from 'lucide-react';
+import { Home, Users, LogOut, Shield, Key, Target, Building2, FileStack, ShieldCheck, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
@@ -13,7 +13,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { path: '/opportunities', label: 'Opportunities', icon: Target },
     { path: '/accounts', label: 'Accounts', icon: Building2 },
     { path: '/contacts', label: 'Contacts', icon: Users },
-    { path: '/contracts', label: 'Contracts', icon: FileText },
     { path: '/vehicles', label: 'Vehicles', icon: FileStack },
     { path: '/compliance', label: 'Compliance', icon: ShieldCheck },
     { path: '/api-settings', label: 'API', icon: Key },

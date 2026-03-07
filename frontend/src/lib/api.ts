@@ -449,12 +449,17 @@ export interface VehicleBrief {
 export interface Opportunity {
   id: string;
   title: string;
+  is_government_contract: boolean;
+  description: string;
   agency?: string;
   account_id?: string;
   naics_code?: string;
   set_aside_type?: 'small_business' | '8a' | 'hubzone' | 'wosb' | 'sdvosb' | 'full_and_open' | 'none';
   estimated_value?: number;
   solicitation_number?: string;
+  sam_gov_notice_id?: string;
+  submission_link?: string;
+  deadline?: string;
   source?: 'sam_gov' | 'agency_forecast' | 'incumbent_recompete' | 'partner_referral' | 'internal';
   stage: 'identified' | 'qualified' | 'capture' | 'teaming' | 'proposal' | 'submitted' | 'awarded' | 'lost';
   capture_manager_id?: string;
@@ -472,12 +477,17 @@ export interface Opportunity {
 
 export interface OpportunityCreate {
   title: string;
+  is_government_contract: boolean;
+  description: string;
   agency?: string;
   account_id?: string;
   naics_code?: string;
   set_aside_type?: Opportunity['set_aside_type'];
   estimated_value?: number;
   solicitation_number?: string;
+  sam_gov_notice_id?: string;
+  submission_link?: string;
+  deadline?: string;
   source?: Opportunity['source'];
   stage: Opportunity['stage'];
   capture_manager_id?: string;

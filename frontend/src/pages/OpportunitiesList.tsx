@@ -113,6 +113,9 @@ export default function OpportunitiesList() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        {opp.is_government_contract && (
+                          <Badge variant="outline">Gov</Badge>
+                        )}
                         <Badge variant={getOpportunityStageBadge(opp.stage)}>
                           {opp.stage}
                         </Badge>

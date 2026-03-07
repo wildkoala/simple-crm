@@ -178,6 +178,8 @@ class Opportunity(Base):
 
     id = Column(String(36), primary_key=True, index=True)
     title = Column(String(300), nullable=False)
+    is_government_contract = Column(Boolean, nullable=False, default=False)
+    description = Column(Text, default="")
     agency = Column(String(300), nullable=True)
     account_id = Column(String(36), ForeignKey("accounts.id"), nullable=True, index=True)
     naics_code = Column(String(20), nullable=True)
@@ -186,6 +188,9 @@ class Opportunity(Base):
     )  # small_business, 8a, hubzone, wosb, sdvosb, full_and_open, none
     estimated_value = Column(Float, nullable=True)
     solicitation_number = Column(String(255), nullable=True)
+    sam_gov_notice_id = Column(String(255), nullable=True, index=True)
+    submission_link = Column(String(2048), nullable=True)
+    deadline = Column(DateTime, nullable=True)
     source = Column(
         String(30), nullable=True
     )  # sam_gov, agency_forecast, incumbent_recompete, partner_referral, internal

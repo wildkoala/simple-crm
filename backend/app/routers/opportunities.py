@@ -147,12 +147,17 @@ def create_opportunity(
     new_opp = Opportunity(
         id=generate_id(),
         title=opp.title,
+        is_government_contract=opp.is_government_contract,
+        description=opp.description,
         agency=opp.agency,
         account_id=opp.account_id,
         naics_code=opp.naics_code,
         set_aside_type=opp.set_aside_type,
         estimated_value=opp.estimated_value,
         solicitation_number=opp.solicitation_number,
+        sam_gov_notice_id=opp.sam_gov_notice_id,
+        submission_link=opp.submission_link,
+        deadline=opp.deadline,
         source=opp.source,
         stage=opp.stage,
         capture_manager_id=opp.capture_manager_id or current_user.id,
@@ -199,12 +204,17 @@ def update_opportunity(
     old_stage = opp.stage
 
     opp.title = opp_update.title
+    opp.is_government_contract = opp_update.is_government_contract
+    opp.description = opp_update.description
     opp.agency = opp_update.agency
     opp.account_id = opp_update.account_id
     opp.naics_code = opp_update.naics_code
     opp.set_aside_type = opp_update.set_aside_type
     opp.estimated_value = opp_update.estimated_value
     opp.solicitation_number = opp_update.solicitation_number
+    opp.sam_gov_notice_id = opp_update.sam_gov_notice_id
+    opp.submission_link = opp_update.submission_link
+    opp.deadline = opp_update.deadline
     opp.source = opp_update.source
     opp.stage = opp_update.stage
     opp.capture_manager_id = opp_update.capture_manager_id

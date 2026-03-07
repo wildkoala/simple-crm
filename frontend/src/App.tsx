@@ -14,8 +14,6 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ContactsList = lazy(() => import('./pages/ContactsList'));
 const ContactDetail = lazy(() => import('./pages/ContactDetail'));
-const ContractsList = lazy(() => import('./pages/ContractsList'));
-const ContractDetail = lazy(() => import('./pages/ContractDetail'));
 const AccountsList = lazy(() => import('./pages/AccountsList'));
 const AccountDetail = lazy(() => import('./pages/AccountDetail'));
 const OpportunitiesList = lazy(() => import('./pages/OpportunitiesList'));
@@ -56,8 +54,6 @@ const App = () => (
               <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
               <Route path="/contacts" element={<ProtectedRoute><ContactsList /></ProtectedRoute>} />
               <Route path="/contacts/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
-              <Route path="/contracts" element={<ProtectedRoute><ContractsList /></ProtectedRoute>} />
-              <Route path="/contracts/:id" element={<ProtectedRoute><ContractDetail /></ProtectedRoute>} />
               <Route path="/vehicles" element={<ProtectedRoute><VehiclesList /></ProtectedRoute>} />
               <Route path="/vehicles/:id" element={<ProtectedRoute><VehicleDetail /></ProtectedRoute>} />
               <Route path="/compliance" element={<ProtectedRoute><ComplianceList /></ProtectedRoute>} />

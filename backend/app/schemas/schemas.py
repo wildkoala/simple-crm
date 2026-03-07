@@ -313,12 +313,17 @@ OpportunitySource = Literal[
 
 class OpportunityBase(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    is_government_contract: bool = False
+    description: str = Field(default="", max_length=50000)
     agency: Optional[str] = Field(default=None, max_length=300)
     account_id: Optional[str] = None
     naics_code: Optional[str] = Field(default=None, max_length=20)
     set_aside_type: Optional[SetAsideType] = None
     estimated_value: Optional[float] = None
     solicitation_number: Optional[str] = Field(default=None, max_length=255)
+    sam_gov_notice_id: Optional[str] = Field(default=None, max_length=255)
+    submission_link: Optional[str] = Field(default=None, max_length=2048)
+    deadline: Optional[datetime] = None
     source: Optional[OpportunitySource] = None
     stage: OpportunityStage = "identified"
     capture_manager_id: Optional[str] = None
@@ -339,12 +344,17 @@ class OpportunityUpdate(OpportunityBase):
 
 class OpportunityPatch(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=300)
+    is_government_contract: Optional[bool] = None
+    description: Optional[str] = Field(default=None, max_length=50000)
     agency: Optional[str] = Field(default=None, max_length=300)
     account_id: Optional[str] = None
     naics_code: Optional[str] = Field(default=None, max_length=20)
     set_aside_type: Optional[SetAsideType] = None
     estimated_value: Optional[float] = None
     solicitation_number: Optional[str] = Field(default=None, max_length=255)
+    sam_gov_notice_id: Optional[str] = Field(default=None, max_length=255)
+    submission_link: Optional[str] = Field(default=None, max_length=2048)
+    deadline: Optional[datetime] = None
     source: Optional[OpportunitySource] = None
     stage: Optional[OpportunityStage] = None
     capture_manager_id: Optional[str] = None
