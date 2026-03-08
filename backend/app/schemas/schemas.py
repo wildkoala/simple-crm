@@ -282,6 +282,7 @@ class User(UserBase):
     id: str
     role: str
     is_active: bool
+    auth_provider: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -316,6 +317,10 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(min_length=1)
 
 
 # Opportunity schemas

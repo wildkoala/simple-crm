@@ -21,6 +21,7 @@ Simple CRM is a straightforward customer relationship management system built sp
 - **Communication Logging**: Record all interactions with contacts (email, phone, meetings)
 - **User Management**: Multi-user support with admin controls
 - **API Integration**: RESTful API with JWT and API key authentication
+- **Google Sign-In**: Optional Google identity provider login (see [Google Sign-In](#google-sign-in))
 - **SAM.gov Integration**: Import contract opportunities from SAM.gov via the govbizops scraper
 - **Gmail Integration**: Sync and send emails through the CRM per contact (see [Gmail Integration](#gmail-integration))
 
@@ -74,7 +75,8 @@ Environment variables can be overridden in a `.env` file at the project root or 
 | `ENV` | `development` | Set to `production` to disable seed data and debug features |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warning`, `error`) |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Backend URL used by the frontend at build time |
-| `GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID for Gmail integration |
+| `VITE_GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID for the frontend Sign-In button |
+| `GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID (backend - for token verification and Gmail) |
 | `GOOGLE_CLIENT_SECRET` | *(empty)* | Google OAuth2 client secret |
 | `GOOGLE_REDIRECT_URI` | `http://localhost:8000/gmail/callback` | OAuth2 callback URL |
 | `GOOGLE_PUBSUB_TOPIC` | *(empty)* | Pub/Sub topic for Gmail push notifications |
@@ -210,6 +212,32 @@ simple-crm/
     ├── dev.sh                # Development launcher (Linux/Mac)
     └── dev.bat               # Development launcher (Windows)
 ```
+
+## Google Sign-In
+
+Users can sign in with their Google account instead of (or in addition to) email/password. The "Sign in with Google" button on the login page is **only visible when `VITE_GOOGLE_CLIENT_ID` is set** in the frontend environment.
+
+### Setup
+
+1. Create a Google Cloud project and OAuth2 web credentials (see [Gmail Integration](#gmail-integration) step 1 if you haven't already)
+2. In the OAuth2 credential, add your frontend URL as an **Authorized JavaScript origin** (e.g., `http://localhost:5173`)
+3. Set the **same Client ID** in both environments:
+
+   **Backend** (`backend/.env`):
+   ```env
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   ```
+
+   **Frontend** (`frontend/.env.local`):
+   ```env
+   VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   ```
+
+4. Restart both services
+
+The Sign-In button will now appear on the login page. On first Google sign-in, a user account is created automatically. If an account with the same email already exists, the Google identity is linked to it.
+
+> **Note:** If `VITE_GOOGLE_CLIENT_ID` is not set, the login page shows only the email/password form. The backend `GOOGLE_CLIENT_ID` must also be set for token verification to work.
 
 ## Gmail Integration
 

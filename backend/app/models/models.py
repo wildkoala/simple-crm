@@ -179,6 +179,8 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="user")  # "admin" or "user"
     is_active = Column(Boolean, nullable=False, default=True)
+    auth_provider = Column(String(20), nullable=True)  # "local" or "google"
+    google_id = Column(String(255), nullable=True, unique=True, index=True)
     api_key_hash = Column(String(255), unique=True, nullable=True, index=True)
     api_key_prefix = Column(String(20), nullable=True)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)

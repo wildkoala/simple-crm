@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, getCurrentUser, login as apiLogin, LoginCredentials, setAuthToken, clearAuthToken, getAuthToken } from '@/lib/api';
+import { User, getCurrentUser, login as apiLogin, googleLogin as apiGoogleLogin, LoginCredentials, setAuthToken, clearAuthToken, getAuthToken } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAdmin: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -57,8 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const { access_token } = await apiGoogleLogin(credential);
+    setAuthToken(access_token);
+    const userData = await getCurrentUser();
+    setUser(userData);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAdmin, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,3 +1,4 @@
+import secrets
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,6 +15,7 @@ from app.auth import (
     get_current_user_or_api_key,
     get_password_hash,
     validate_password,
+    verify_google_id_token,
     verify_password,
     verify_reset_token,
 )
@@ -21,6 +23,7 @@ from app.database import get_db
 from app.email import send_password_reset_email
 from app.models.models import User
 from app.schemas.schemas import (
+    GoogleAuthRequest,
     LoginRequest,
     PasswordChange,
     PasswordReset,
@@ -51,6 +54,55 @@ def login(request: Request, login_request: LoginRequest, db: Session = Depends(g
         )
 
     # Check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive. Please contact an administrator.",
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/google", response_model=Token)
+@limiter.limit("10/minute")
+def google_login(request: Request, google_auth: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """Authenticate with Google ID token and return JWT token"""
+    id_info = verify_google_id_token(google_auth.credential)
+
+    google_id = id_info["sub"]
+    email = id_info["email"]
+    name = id_info.get("name", email.split("@")[0])
+
+    # Find user by Google ID first
+    user = db.query(User).filter(User.google_id == google_id).first()
+
+    if not user:
+        # Try to find by email to link existing account
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.google_id = google_id
+            if not user.auth_provider:
+                user.auth_provider = "google"
+            db.commit()
+        else:
+            # Create new user
+            user = User(
+                id=generate_id(),
+                email=email,
+                name=name,
+                hashed_password=get_password_hash(secrets.token_hex(32)),
+                role="user",
+                auth_provider="google",
+                google_id=google_id,
+                is_active=True,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -88,6 +88,7 @@ export interface User {
   name: string;
   role: 'admin' | 'user';
   is_active: boolean;
+  auth_provider?: string;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +125,13 @@ export async function login(credentials: LoginCredentials): Promise<AuthToken> {
   return fetchApi<AuthToken>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
+  });
+}
+
+export async function googleLogin(credential: string): Promise<AuthToken> {
+  return fetchApi<AuthToken>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
   });
 }
 

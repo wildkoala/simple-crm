@@ -29,6 +29,9 @@ backend/.coverage
 # Database files
 *.db
 
+# mdbook build output
+docs/book
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

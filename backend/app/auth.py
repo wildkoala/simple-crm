@@ -9,6 +9,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from google.auth.transport.requests import Request as GoogleRequest
+from google.oauth2 import id_token as google_id_token
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -27,6 +29,7 @@ if not SECRET_KEY:  # pragma: no cover
         "Set it in backend/.env or as an environment variable. "
         'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
     )
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
@@ -190,6 +193,27 @@ def get_current_user_or_api_key(
 
     # Fall back to JWT authentication
     return _get_user_from_jwt(token, db)
+
+
+def verify_google_id_token(credential: str) -> dict:
+    """Verify a Google ID token and return the decoded payload."""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google authentication is not configured",
+        )
+    try:
+        id_info = google_id_token.verify_oauth2_token(
+            credential, GoogleRequest(), GOOGLE_CLIENT_ID
+        )
+        if not id_info.get("email_verified"):
+            raise ValueError("Email not verified by Google")
+        return id_info
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google credential: {e}",
+        )
 
 
 def validate_password(password: str) -> None:
