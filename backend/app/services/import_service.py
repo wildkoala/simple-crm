@@ -57,10 +57,7 @@ def import_opportunities(
     errors: list[str] = []
 
     # Check for duplicates against both Opportunity and legacy Contract tables
-    notice_ids = [
-        opp.get("noticeId") or getattr(opp, "noticeId", None)
-        for opp in opportunities
-    ]
+    notice_ids = [opp.get("noticeId") or getattr(opp, "noticeId", None) for opp in opportunities]
     notice_ids = [nid for nid in notice_ids if nid]
     existing_notice_ids: set[str] = set()
     if notice_ids:
@@ -91,9 +88,7 @@ def import_opportunities(
 
     existing_contacts_by_email: dict[str, Contact] = {}
     if all_poc_emails:
-        existing_contacts = (
-            db.query(Contact).filter(Contact.email.in_(all_poc_emails)).all()
-        )
+        existing_contacts = db.query(Contact).filter(Contact.email.in_(all_poc_emails)).all()
         existing_contacts_by_email = {c.email: c for c in existing_contacts}
 
     for opp in opportunities:
@@ -122,19 +117,11 @@ def import_opportunities(
                     poc_email = _get_field(poc, "email")
                     poc_name = _get_field(poc, "fullName")
                     if poc_email and poc_name:
-                        existing_contact = existing_contacts_by_email.get(
-                            poc_email
-                        )
+                        existing_contact = existing_contacts_by_email.get(poc_email)
                         if not existing_contact:
                             name_parts = poc_name.strip().split()
-                            first_name = (
-                                name_parts[0] if name_parts else "Unknown"
-                            )
-                            last_name = (
-                                " ".join(name_parts[1:])
-                                if len(name_parts) > 1
-                                else ""
-                            )
+                            first_name = name_parts[0] if name_parts else "Unknown"
+                            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
                             new_contact = Contact(
                                 id=generate_id(),
                                 first_name=first_name,
@@ -145,18 +132,13 @@ def import_opportunities(
                                 contact_type="government",
                                 status="warm",
                                 needs_follow_up=True,
-                                notes=(
-                                    "Auto-imported from SAM.gov"
-                                    f" opportunity: {title}"
-                                ),
+                                notes=(f"Auto-imported from SAM.gov opportunity: {title}"),
                                 assigned_user_id=current_user.id,
                             )
                             db.add(new_contact)
                             db.flush()
                             contacts_created += 1
-                            existing_contacts_by_email[poc_email] = (
-                                new_contact
-                            )
+                            existing_contacts_by_email[poc_email] = new_contact
 
             sol_num = _get_field(opp, "solicitationNumber")
             naics = _get_field(opp, "naicsCode")
@@ -186,9 +168,7 @@ def import_opportunities(
 
         except Exception as e:
             savepoint.rollback()
-            errors.append(
-                f"Error importing {_get_field(opp, 'title') or '?'}: {e}"
-            )
+            errors.append(f"Error importing {_get_field(opp, 'title') or '?'}: {e}")
 
     try:
         db.commit()

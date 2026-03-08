@@ -17,8 +17,12 @@ from app.utils import generate_id
 router = APIRouter(prefix="/opportunities", tags=["capture-notes"])
 
 VALID_SECTIONS = [
-    "customer_intel", "incumbent", "competitors",
-    "partners", "risks", "strategy",
+    "customer_intel",
+    "incumbent",
+    "competitors",
+    "partners",
+    "risks",
+    "strategy",
 ]
 
 
@@ -31,19 +35,17 @@ def get_capture_notes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(
-        Opportunity.id == opportunity_id
-    ).first()
+    opp = (
+        db.query(Opportunity)
+        .filter(Opportunity.id == opportunity_id, Opportunity.deleted_at.is_(None))
+        .first()
+    )
     if not opp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Opportunity not found",
         )
-    return (
-        db.query(CaptureNote)
-        .filter(CaptureNote.opportunity_id == opportunity_id)
-        .all()
-    )
+    return db.query(CaptureNote).filter(CaptureNote.opportunity_id == opportunity_id).all()
 
 
 @router.put(
@@ -64,9 +66,11 @@ def upsert_capture_note(
             detail=f"Invalid section. Must be one of: {VALID_SECTIONS}",
         )
 
-    opp = db.query(Opportunity).filter(
-        Opportunity.id == opportunity_id
-    ).first()
+    opp = (
+        db.query(Opportunity)
+        .filter(Opportunity.id == opportunity_id, Opportunity.deleted_at.is_(None))
+        .first()
+    )
     if not opp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

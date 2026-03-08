@@ -1,6 +1,10 @@
+import logging
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import get_current_active_user
@@ -17,7 +21,12 @@ from app.schemas.schemas import (
 )
 from app.utils import generate_id
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+
+# Base filter to exclude soft-deleted opportunities
+_active = Opportunity.deleted_at.is_(None)
 
 
 @router.get("", response_model=List[OpportunitySchema])
@@ -35,7 +44,7 @@ def get_opportunities(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    query = db.query(Opportunity).options(selectinload(Opportunity.vehicles))
+    query = db.query(Opportunity).options(selectinload(Opportunity.vehicles)).filter(_active)
 
     if stage:
         query = query.filter(Opportunity.stage == stage)
@@ -66,48 +75,86 @@ def get_pipeline_metrics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opportunities = db.query(Opportunity).all()
-    total = len(opportunities)
-    pipeline_value = sum(o.estimated_value or 0 for o in opportunities)
+    # Total count and pipeline value in a single query
+    totals = (
+        db.query(
+            func.count(Opportunity.id).label("total"),
+            func.coalesce(func.sum(Opportunity.estimated_value), 0).label("pipeline_value"),
+        )
+        .filter(_active)
+        .first()
+    )
+    total = totals.total
+    pipeline_value = float(totals.pipeline_value)
 
     # Expected revenue weighted by win probability
-    expected_revenue = sum(
-        (o.estimated_value or 0) * (o.win_probability or 0) / 100 for o in opportunities
+    expected_revenue_row = (
+        db.query(
+            func.coalesce(
+                func.sum(Opportunity.estimated_value * Opportunity.win_probability / 100), 0
+            ).label("expected"),
+        )
+        .filter(_active)
+        .first()
     )
+    expected_revenue = float(expected_revenue_row.expected)
 
-    # Win rate: awarded / (awarded + lost)
-    awarded = sum(1 for o in opportunities if o.stage == "awarded")
-    lost = sum(1 for o in opportunities if o.stage == "lost")
+    # Win rate
+    awarded = (
+        db.query(func.count(Opportunity.id))
+        .filter(_active, Opportunity.stage == "awarded")
+        .scalar()
+    )
+    lost = (
+        db.query(func.count(Opportunity.id)).filter(_active, Opportunity.stage == "lost").scalar()
+    )
     win_rate = (awarded / (awarded + lost) * 100) if (awarded + lost) > 0 else 0
 
-    # Average deal size
-    valued = [o for o in opportunities if o.estimated_value and o.estimated_value > 0]
-    avg_deal = sum(o.estimated_value for o in valued) / len(valued) if valued else 0
+    # Average deal size (excluding zero/null)
+    avg_deal = (
+        db.query(func.coalesce(func.avg(Opportunity.estimated_value), 0))
+        .filter(
+            _active,
+            Opportunity.estimated_value.isnot(None),
+            Opportunity.estimated_value > 0,
+        )
+        .scalar()
+    )
 
-    # By stage
-    by_stage = {}
-    for o in opportunities:
-        stage = o.stage
-        if stage not in by_stage:
-            by_stage[stage] = {"count": 0, "value": 0}
-        by_stage[stage]["count"] += 1
-        by_stage[stage]["value"] += o.estimated_value or 0
+    # By stage (aggregated in SQL)
+    stage_rows = (
+        db.query(
+            Opportunity.stage,
+            func.count(Opportunity.id).label("count"),
+            func.coalesce(func.sum(Opportunity.estimated_value), 0).label("value"),
+        )
+        .filter(_active)
+        .group_by(Opportunity.stage)
+        .all()
+    )
+    by_stage = {row.stage: {"count": row.count, "value": float(row.value)} for row in stage_rows}
 
-    # By agency
-    by_agency = {}
-    for o in opportunities:
-        agency = o.agency or "Unknown"
-        if agency not in by_agency:
-            by_agency[agency] = {"count": 0, "value": 0}
-        by_agency[agency]["count"] += 1
-        by_agency[agency]["value"] += o.estimated_value or 0
+    # By agency (aggregated in SQL)
+    agency_rows = (
+        db.query(
+            func.coalesce(Opportunity.agency, "Unknown").label("agency_name"),
+            func.count(Opportunity.id).label("count"),
+            func.coalesce(func.sum(Opportunity.estimated_value), 0).label("value"),
+        )
+        .filter(_active)
+        .group_by(func.coalesce(Opportunity.agency, "Unknown"))
+        .all()
+    )
+    by_agency = {
+        row.agency_name: {"count": row.count, "value": float(row.value)} for row in agency_rows
+    }
 
     return PipelineMetrics(
         total_opportunities=total,
         pipeline_value=pipeline_value,
-        expected_award_revenue=expected_revenue,
+        expected_award_revenue=round(expected_revenue, 2),
         win_rate=round(win_rate, 1),
-        average_deal_size=round(avg_deal, 2),
+        average_deal_size=round(float(avg_deal), 2),
         by_stage=by_stage,
         by_agency=by_agency,
     )
@@ -122,13 +169,11 @@ def get_opportunity(
     opportunity = (
         db.query(Opportunity)
         .options(selectinload(Opportunity.vehicles))
-        .filter(Opportunity.id == opportunity_id)
+        .filter(Opportunity.id == opportunity_id, _active)
         .first()
     )
     if not opportunity:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
     return opportunity
 
 
@@ -136,6 +181,27 @@ def _resolve_vehicles(vehicle_ids: List[str], db: Session) -> list:
     if not vehicle_ids:
         return []
     return db.query(ContractVehicle).filter(ContractVehicle.id.in_(vehicle_ids)).all()
+
+
+def _auto_create_proposal(opp: Opportunity, current_user: User, db: Session):
+    """Safely auto-create a proposal, handling concurrent creation."""
+    existing = db.query(Proposal).filter(Proposal.opportunity_id == opp.id).first()
+    if existing:
+        return
+    try:
+        savepoint = db.begin_nested()
+        proposal = Proposal(
+            id=generate_id(),
+            opportunity_id=opp.id,
+            proposal_manager_id=current_user.id,
+            status="not_started",
+            submission_deadline=opp.proposal_due_date,
+        )
+        db.add(proposal)
+        savepoint.commit()
+    except IntegrityError:
+        savepoint.rollback()
+        logger.info("Proposal already exists for opportunity %s (concurrent creation)", opp.id)
 
 
 @router.post("", response_model=OpportunitySchema, status_code=status.HTTP_201_CREATED)
@@ -195,11 +261,9 @@ def update_opportunity(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
+    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id, _active).first()
     if not opp:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
 
     old_stage = opp.stage
 
@@ -227,15 +291,8 @@ def update_opportunity(
     opp.vehicles = _resolve_vehicles(opp_update.vehicle_ids, db)
 
     # Auto-create proposal when moving to proposal stage
-    if opp_update.stage == "proposal" and old_stage != "proposal" and not opp.proposal:
-        proposal = Proposal(
-            id=generate_id(),
-            opportunity_id=opp.id,
-            proposal_manager_id=current_user.id,
-            status="not_started",
-            submission_deadline=opp_update.proposal_due_date,
-        )
-        db.add(proposal)
+    if opp_update.stage == "proposal" and old_stage != "proposal":
+        _auto_create_proposal(opp, current_user, db)
 
     db.commit()
     db.refresh(opp)
@@ -249,11 +306,9 @@ def patch_opportunity(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
+    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id, _active).first()
     if not opp:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
 
     old_stage = opp.stage
     update_data = updates.model_dump(exclude_unset=True)
@@ -267,15 +322,8 @@ def patch_opportunity(
 
     # Auto-create proposal when moving to proposal stage
     new_stage = update_data.get("stage")
-    if new_stage == "proposal" and old_stage != "proposal" and not opp.proposal:
-        proposal = Proposal(
-            id=generate_id(),
-            opportunity_id=opp.id,
-            proposal_manager_id=current_user.id,
-            status="not_started",
-            submission_deadline=opp.proposal_due_date,
-        )
-        db.add(proposal)
+    if new_stage == "proposal" and old_stage != "proposal":
+        _auto_create_proposal(opp, current_user, db)
 
     db.commit()
     db.refresh(opp)
@@ -288,12 +336,59 @@ def delete_opportunity(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
+    opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id, _active).first()
+    if not opp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
+
+    from app.routers.audit import create_audit_entry
+
+    opp.deleted_at = datetime.now(timezone.utc)
+    db.commit()
+
+    create_audit_entry(
+        db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="opportunity",
+        entity_id=opportunity_id,
+        details=f"Soft-deleted opportunity: {opp.title}",
+    )
+    return None
+
+
+@router.post("/{opportunity_id}/restore", response_model=OpportunitySchema)
+def restore_opportunity(
+    opportunity_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Restore a soft-deleted opportunity. Admin only."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    opp = (
+        db.query(Opportunity)
+        .options(selectinload(Opportunity.vehicles))
+        .filter(Opportunity.id == opportunity_id, Opportunity.deleted_at.isnot(None))
+        .first()
+    )
     if not opp:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Deleted opportunity not found"
         )
 
-    db.delete(opp)
+    from app.routers.audit import create_audit_entry
+
+    opp.deleted_at = None
     db.commit()
-    return None
+    db.refresh(opp)
+
+    create_audit_entry(
+        db,
+        user_id=current_user.id,
+        action="restore",
+        entity_type="opportunity",
+        entity_id=opportunity_id,
+        details=f"Restored opportunity: {opp.title}",
+    )
+    return opp

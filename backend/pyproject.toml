@@ -31,6 +31,9 @@ dev = [
     "pytest-asyncio",
     "httpx",
     "ruff",
+    "freezegun",
+    "pip-audit",
+    "bandit",
 ]
 
 [project.scripts]
@@ -41,6 +44,11 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:passlib",
+    "ignore::DeprecationWarning:jose",
+]
 
 [tool.ruff]
 target-version = "py312"

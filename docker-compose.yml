@@ -2,27 +2,33 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: crm
-      POSTGRES_PASSWORD: crm
-      POSTGRES_DB: crm
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-crm}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U crm"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crm}"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql://crm:crm@db:5432/crm
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD:?Error}@db:5432/${POSTGRES_DB:-crm}
+      SECRET_KEY: ${SECRET_KEY:?Error: SECRET_KEY must be set}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: "60"
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ENV: ${ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
@@ -30,16 +36,37 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: http://localhost:8000
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:

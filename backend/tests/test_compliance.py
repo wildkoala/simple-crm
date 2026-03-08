@@ -2,6 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 
+from freezegun import freeze_time
+
+from app.auth import create_access_token
 from app.models.models import Compliance
 from app.utils import generate_id
 
@@ -20,6 +23,12 @@ def _make_compliance(db, **overrides):
     db.commit()
     db.refresh(c)
     return c
+
+
+def _frozen_headers(user):
+    """Create auth headers valid at the frozen time."""
+    token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=30))
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_get_compliance_empty(client, admin_headers, admin_user):
@@ -57,41 +66,45 @@ def test_get_compliance_not_found(client, admin_headers, admin_user):
     assert response.status_code == 404
 
 
-def test_get_expiring_certifications(client, admin_headers, db, admin_user):
-    now = datetime.now(timezone.utc)
-    # Expiring in 30 days (within default 90 day window)
-    _make_compliance(
-        db,
-        expiration_date=now + timedelta(days=30),
-        status="expiring_soon",
-    )
-    # Expiring in 200 days (outside default window)
-    _make_compliance(
-        db,
-        certification_type="8a",
-        expiration_date=now + timedelta(days=200),
-        status="active",
-    )
-    # Already expired (should not appear)
-    _make_compliance(
-        db,
-        certification_type="wosb",
-        expiration_date=now - timedelta(days=10),
-        status="expired",
-    )
-    response = client.get("/compliance/expiring", headers=admin_headers)
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["status"] == "expiring_soon"
+def test_get_expiring_certifications(client, db, admin_user):
+    with freeze_time("2026-06-15T12:00:00Z"):
+        headers = _frozen_headers(admin_user)
+        frozen_now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+        # Expiring in 30 days (within default 90 day window)
+        _make_compliance(
+            db,
+            expiration_date=frozen_now + timedelta(days=30),
+            status="expiring_soon",
+        )
+        # Expiring in 200 days (outside default window)
+        _make_compliance(
+            db,
+            certification_type="8a",
+            expiration_date=frozen_now + timedelta(days=200),
+            status="active",
+        )
+        # Already expired (should not appear)
+        _make_compliance(
+            db,
+            certification_type="wosb",
+            expiration_date=frozen_now - timedelta(days=10),
+            status="expired",
+        )
+        response = client.get("/compliance/expiring", headers=headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["status"] == "expiring_soon"
 
 
-def test_get_expiring_certifications_custom_days(client, admin_headers, db, admin_user):
-    now = datetime.now(timezone.utc)
-    _make_compliance(db, expiration_date=now + timedelta(days=30))
-    response = client.get("/compliance/expiring?days_ahead=10", headers=admin_headers)
-    assert response.status_code == 200
-    assert len(response.json()) == 0  # 30 days out, but window is only 10
+def test_get_expiring_certifications_custom_days(client, db, admin_user):
+    with freeze_time("2026-06-15T12:00:00Z"):
+        headers = _frozen_headers(admin_user)
+        frozen_now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+        _make_compliance(db, expiration_date=frozen_now + timedelta(days=30))
+        response = client.get("/compliance/expiring?days_ahead=10", headers=headers)
+        assert response.status_code == 200
+        assert len(response.json()) == 0  # 30 days out, but window is only 10
 
 
 def test_create_compliance(client, admin_headers, admin_user):
@@ -176,3 +189,42 @@ def test_delete_compliance(client, admin_headers, db, admin_user):
 def test_delete_compliance_not_found(client, admin_headers, admin_user):
     response = client.delete("/compliance/nonexistent", headers=admin_headers)
     assert response.status_code == 404
+
+
+# --- Authorization ---
+
+
+def test_update_compliance_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    c = _make_compliance(db, created_by_user_id=admin_user.id)
+    response = client.put(
+        f"/compliance/{c.id}",
+        json={
+            "certification_type": "small_business",
+            "status": "active",
+            "notes": "",
+        },
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_patch_compliance_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    c = _make_compliance(db, created_by_user_id=admin_user.id)
+    response = client.patch(
+        f"/compliance/{c.id}",
+        json={"status": "expired"},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_compliance_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    c = _make_compliance(db, created_by_user_id=admin_user.id)
+    response = client.delete(f"/compliance/{c.id}", headers=user_headers)
+    assert response.status_code == 403

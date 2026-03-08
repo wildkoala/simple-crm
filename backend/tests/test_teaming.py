@@ -76,9 +76,7 @@ def test_get_teaming_filter_by_opportunity(client, admin_headers, db, admin_user
     acct = _make_account(db)
     _make_teaming(db, opp1.id, acct.id)
     _make_teaming(db, opp2.id, acct.id, role="prime")
-    response = client.get(
-        f"/teaming?opportunity_id={opp1.id}", headers=admin_headers
-    )
+    response = client.get(f"/teaming?opportunity_id={opp1.id}", headers=admin_headers)
     assert response.status_code == 200
     assert len(response.json()) == 1
 
@@ -191,3 +189,62 @@ def test_delete_teaming(client, admin_headers, db, admin_user):
 def test_delete_teaming_not_found(client, admin_headers, admin_user):
     response = client.delete("/teaming/nonexistent", headers=admin_headers)
     assert response.status_code == 404
+
+
+# --- Authorization ---
+
+
+def test_update_teaming_forbidden_for_non_opp_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    opp = _make_opportunity(db, admin_user.id)
+    acct = _make_account(db)
+    t = _make_teaming(db, opp.id, acct.id)
+    response = client.put(
+        f"/teaming/{t.id}",
+        json={
+            "opportunity_id": opp.id,
+            "partner_account_id": acct.id,
+            "role": "prime",
+            "status": "active",
+            "notes": "",
+        },
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_patch_teaming_forbidden_for_non_opp_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    opp = _make_opportunity(db, admin_user.id)
+    acct = _make_account(db)
+    t = _make_teaming(db, opp.id, acct.id)
+    response = client.patch(
+        f"/teaming/{t.id}",
+        json={"status": "active"},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_teaming_forbidden_for_non_opp_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    opp = _make_opportunity(db, admin_user.id)
+    acct = _make_account(db)
+    t = _make_teaming(db, opp.id, acct.id)
+    response = client.delete(f"/teaming/{t.id}", headers=user_headers)
+    assert response.status_code == 403
+
+
+def test_opp_creator_can_modify_teaming(client, user_headers, db, admin_user, regular_user):
+    opp = _make_opportunity(db, regular_user.id)
+    acct = _make_account(db)
+    t = _make_teaming(db, opp.id, acct.id)
+    response = client.patch(
+        f"/teaming/{t.id}",
+        json={"status": "active"},
+        headers=user_headers,
+    )
+    assert response.status_code == 200

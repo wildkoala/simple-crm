@@ -19,6 +19,15 @@ from app.utils import generate_id
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
+def _check_account_authorization(account: Account, current_user: User):
+    """Only creator or admin can modify/delete an account."""
+    if account.created_by_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this account",
+        )
+
+
 @router.get("", response_model=List[AccountSchema])
 def get_accounts(
     skip: int = Query(default=0, ge=0),
@@ -30,7 +39,7 @@ def get_accounts(
     query = db.query(Account)
     if account_type:
         query = query.filter(Account.account_type == account_type)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Account.name).offset(skip).limit(limit).all()
 
 
 @router.get("/{account_id}", response_model=AccountSchema)
@@ -60,6 +69,7 @@ def create_account(
         location=account.location,
         website=account.website,
         notes=account.notes,
+        created_by_user_id=current_user.id,
     )
     db.add(new_account)
     db.commit()
@@ -77,6 +87,8 @@ def update_account(
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+
+    _check_account_authorization(account, current_user)
 
     account.name = account_update.name
     account.account_type = account_update.account_type
@@ -102,6 +114,8 @@ def patch_account(
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
 
+    _check_account_authorization(account, current_user)
+
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(account, field, value)
@@ -121,6 +135,19 @@ def delete_account(
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
 
+    _check_account_authorization(account, current_user)
+
+    from app.routers.audit import create_audit_entry
+
     db.delete(account)
     db.commit()
+
+    create_audit_entry(
+        db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="account",
+        entity_id=account_id,
+        details=f"Deleted account: {account.name}",
+    )
     return None

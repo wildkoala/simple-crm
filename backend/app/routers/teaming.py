@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import get_current_active_user
 from app.database import get_db
-from app.models.models import Teaming, User
+from app.models.models import Opportunity, Teaming, User
 from app.schemas.schemas import (
     Teaming as TeamingSchema,
 )
@@ -19,6 +19,19 @@ from app.utils import generate_id
 router = APIRouter(prefix="/teaming", tags=["teaming"])
 
 
+def _check_teaming_authorization(teaming: Teaming, current_user: User, db: Session):
+    """Only the opportunity creator or admin can modify teaming records."""
+    if current_user.role == "admin":
+        return
+    opp = db.query(Opportunity).filter(Opportunity.id == teaming.opportunity_id).first()
+    if opp and opp.created_by_user_id == current_user.id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Not authorized to modify this teaming record",
+    )
+
+
 @router.get("", response_model=List[TeamingSchema])
 def get_teaming_records(
     opportunity_id: Optional[str] = Query(default=None),
@@ -30,7 +43,7 @@ def get_teaming_records(
     query = db.query(Teaming).options(joinedload(Teaming.partner_account))
     if opportunity_id:
         query = query.filter(Teaming.opportunity_id == opportunity_id)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Teaming.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.get("/{teaming_id}", response_model=TeamingSchema)
@@ -85,6 +98,8 @@ def update_teaming(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teaming record not found"
         )
 
+    _check_teaming_authorization(teaming, current_user, db)
+
     teaming.opportunity_id = teaming_update.opportunity_id
     teaming.partner_account_id = teaming_update.partner_account_id
     teaming.role = teaming_update.role
@@ -109,6 +124,8 @@ def patch_teaming(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teaming record not found"
         )
 
+    _check_teaming_authorization(teaming, current_user, db)
+
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(teaming, field, value)
@@ -129,6 +146,8 @@ def delete_teaming(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Teaming record not found"
         )
+
+    _check_teaming_authorization(teaming, current_user, db)
 
     db.delete(teaming)
     db.commit()

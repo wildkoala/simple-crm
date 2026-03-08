@@ -14,6 +14,7 @@ from app.models.models import Base
 from app.routers import (
     accounts,
     attachments,
+    audit,
     auth,
     capture_notes,
     communications,
@@ -113,6 +114,7 @@ app.include_router(proposals.router)
 app.include_router(compliance.router)
 app.include_router(sam_gov.router)
 app.include_router(users.router)
+app.include_router(audit.router)
 
 
 @app.get("/")

@@ -1,12 +1,10 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 # Account schemas
-AccountType = Literal[
-    "government_agency", "prime_contractor", "subcontractor", "partner", "vendor"
-]
+AccountType = Literal["government_agency", "prime_contractor", "subcontractor", "partner", "vendor"]
 
 
 class AccountBase(BaseModel):
@@ -42,17 +40,16 @@ class AccountBrief(BaseModel):
     name: str
     account_type: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Account(AccountBase):
     id: str
+    created_by_user_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Contact schemas
@@ -107,8 +104,7 @@ class ContactBrief(BaseModel):
     first_name: str
     last_name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Contact(ContactBase):
@@ -121,8 +117,7 @@ class Contact(ContactBase):
     title: Optional[str] = None
     relationship_strength: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Communication schemas
@@ -141,8 +136,7 @@ class Communication(CommunicationBase):
     id: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Contract schemas
@@ -182,8 +176,7 @@ class Contract(ContractBase):
     assigned_contact_ids: List[str] = []
     assigned_contacts: List[ContactBrief] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # SAM.gov Import schemas
@@ -265,8 +258,7 @@ class User(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Password reset schemas
@@ -303,9 +295,7 @@ class LoginRequest(BaseModel):
 OpportunityStage = Literal[
     "identified", "qualified", "capture", "teaming", "proposal", "submitted", "awarded", "lost"
 ]
-SetAsideType = Literal[
-    "small_business", "8a", "hubzone", "wosb", "sdvosb", "full_and_open", "none"
-]
+SetAsideType = Literal["small_business", "8a", "hubzone", "wosb", "sdvosb", "full_and_open", "none"]
 OpportunitySource = Literal[
     "sam_gov", "agency_forecast", "incumbent_recompete", "partner_referral", "internal"
 ]
@@ -370,8 +360,7 @@ class VehicleBrief(BaseModel):
     id: str
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Opportunity(OpportunityBase):
@@ -379,11 +368,11 @@ class Opportunity(OpportunityBase):
     created_at: datetime
     updated_at: datetime
     created_by_user_id: Optional[str] = None
+    deleted_at: Optional[datetime] = None
     vehicle_ids: List[str] = []
     vehicles: List[VehicleBrief] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Contract Vehicle schemas
@@ -417,11 +406,11 @@ class ContractVehiclePatch(BaseModel):
 
 class ContractVehicle(ContractVehicleBase):
     id: str
+    created_by_user_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Teaming schemas
@@ -457,8 +446,7 @@ class Teaming(TeamingBase):
     updated_at: datetime
     partner_account: Optional[AccountBrief] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Proposal schemas
@@ -496,14 +484,11 @@ class Proposal(ProposalBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Compliance schemas
-CertificationType = Literal[
-    "small_business", "8a", "hubzone", "wosb", "sdvosb", "edwosb"
-]
+CertificationType = Literal["small_business", "8a", "hubzone", "wosb", "sdvosb", "edwosb"]
 ComplianceStatus = Literal["active", "expiring_soon", "expired", "pending"]
 
 
@@ -535,17 +520,23 @@ class CompliancePatch(BaseModel):
 
 class Compliance(ComplianceBase):
     id: str
+    created_by_user_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Opportunity Timeline schemas
 OpportunityEventType = Literal[
-    "discovery", "contact", "rfp_release", "proposal_submitted",
-    "meeting", "stage_change", "note", "other"
+    "discovery",
+    "contact",
+    "rfp_release",
+    "proposal_submitted",
+    "meeting",
+    "stage_change",
+    "note",
+    "other",
 ]
 
 
@@ -571,8 +562,7 @@ class OpportunityEvent(BaseModel):
     created_by_user_id: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Capture Notes schemas
@@ -598,8 +588,7 @@ class CaptureNote(BaseModel):
     content: str
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Attachment schemas
@@ -612,8 +601,20 @@ class AttachmentSchema(BaseModel):
     uploaded_by_user_id: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Audit Log schemas
+class AuditLogResponse(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    action: str
+    entity_type: str
+    entity_id: str
+    details: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Pipeline/Reporting schemas

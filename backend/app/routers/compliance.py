@@ -20,6 +20,15 @@ from app.utils import generate_id
 router = APIRouter(prefix="/compliance", tags=["compliance"])
 
 
+def _check_compliance_authorization(record: Compliance, current_user: User):
+    """Only creator or admin can modify/delete a compliance record."""
+    if record.created_by_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this compliance record",
+        )
+
+
 @router.get("", response_model=List[ComplianceSchema])
 def get_compliance_records(
     skip: int = Query(default=0, ge=0),
@@ -31,7 +40,7 @@ def get_compliance_records(
     query = db.query(Compliance)
     if compliance_status:
         query = query.filter(Compliance.status == compliance_status)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Compliance.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.get("/expiring", response_model=List[ComplianceSchema])
@@ -82,6 +91,7 @@ def create_compliance(
         expiration_date=compliance.expiration_date,
         status=compliance.status,
         notes=compliance.notes,
+        created_by_user_id=current_user.id,
     )
     db.add(new_record)
     db.commit()
@@ -101,6 +111,8 @@ def update_compliance(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Compliance record not found"
         )
+
+    _check_compliance_authorization(record, current_user)
 
     record.certification_type = compliance_update.certification_type
     record.issued_by = compliance_update.issued_by
@@ -127,6 +139,8 @@ def patch_compliance(
             status_code=status.HTTP_404_NOT_FOUND, detail="Compliance record not found"
         )
 
+    _check_compliance_authorization(record, current_user)
+
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(record, field, value)
@@ -147,6 +161,8 @@ def delete_compliance(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Compliance record not found"
         )
+
+    _check_compliance_authorization(record, current_user)
 
     db.delete(record)
     db.commit()

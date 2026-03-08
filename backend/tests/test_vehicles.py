@@ -114,3 +114,38 @@ def test_delete_vehicle(client, admin_headers, db, admin_user):
 def test_delete_vehicle_not_found(client, admin_headers, admin_user):
     response = client.delete("/vehicles/nonexistent", headers=admin_headers)
     assert response.status_code == 404
+
+
+# --- Authorization ---
+
+
+def test_update_vehicle_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    v = _make_vehicle(db, created_by_user_id=admin_user.id)
+    response = client.put(
+        f"/vehicles/{v.id}",
+        json={"name": "Hacked", "notes": ""},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_patch_vehicle_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    v = _make_vehicle(db, created_by_user_id=admin_user.id)
+    response = client.patch(
+        f"/vehicles/{v.id}",
+        json={"name": "Hacked"},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_vehicle_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    v = _make_vehicle(db, created_by_user_id=admin_user.id)
+    response = client.delete(f"/vehicles/{v.id}", headers=user_headers)
+    assert response.status_code == 403

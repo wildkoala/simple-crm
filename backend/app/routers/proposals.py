@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_active_user
 from app.database import get_db
-from app.models.models import Proposal, User
+from app.models.models import Opportunity, Proposal, User
 from app.schemas.schemas import (
     Proposal as ProposalSchema,
 )
@@ -17,6 +17,21 @@ from app.schemas.schemas import (
 from app.utils import generate_id
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
+
+
+def _check_proposal_authorization(proposal: Proposal, current_user: User, db: Session):
+    """Only the opportunity creator, proposal manager, or admin can modify."""
+    if current_user.role == "admin":
+        return
+    if proposal.proposal_manager_id == current_user.id:
+        return
+    opp = db.query(Opportunity).filter(Opportunity.id == proposal.opportunity_id).first()
+    if opp and opp.created_by_user_id == current_user.id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Not authorized to modify this proposal",
+    )
 
 
 @router.get("", response_model=List[ProposalSchema])
@@ -33,7 +48,7 @@ def get_proposals(
         query = query.filter(Proposal.opportunity_id == opportunity_id)
     if proposal_status:
         query = query.filter(Proposal.status == proposal_status)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Proposal.updated_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.get("/{proposal_id}", response_model=ProposalSchema)
@@ -44,9 +59,7 @@ def get_proposal(
 ):
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
     if not proposal:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
     return proposal
 
 
@@ -57,11 +70,7 @@ def create_proposal(
     current_user: User = Depends(get_current_active_user),
 ):
     # Check if proposal already exists for this opportunity
-    existing = (
-        db.query(Proposal)
-        .filter(Proposal.opportunity_id == proposal.opportunity_id)
-        .first()
-    )
+    existing = db.query(Proposal).filter(Proposal.opportunity_id == proposal.opportunity_id).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -92,9 +101,9 @@ def update_proposal(
 ):
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
     if not proposal:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+
+    _check_proposal_authorization(proposal, current_user, db)
 
     proposal.proposal_manager_id = proposal_update.proposal_manager_id
     proposal.submission_type = proposal_update.submission_type
@@ -116,9 +125,9 @@ def patch_proposal(
 ):
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
     if not proposal:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+
+    _check_proposal_authorization(proposal, current_user, db)
 
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -137,9 +146,9 @@ def delete_proposal(
 ):
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
     if not proposal:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+
+    _check_proposal_authorization(proposal, current_user, db)
 
     db.delete(proposal)
     db.commit()

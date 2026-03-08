@@ -618,7 +618,7 @@ export async function getAttachments(opportunityId: string): Promise<AttachmentR
 export async function uploadAttachment(opportunityId: string, file: File): Promise<AttachmentRecord> {
   const formData = new FormData();
   formData.append('file', file);
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const res = await fetch(`${API_BASE_URL}/opportunities/${opportunityId}/attachments`, {
     method: 'POST',
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },

@@ -19,6 +19,15 @@ from app.utils import generate_id
 router = APIRouter(prefix="/vehicles", tags=["contract_vehicles"])
 
 
+def _check_vehicle_authorization(vehicle: ContractVehicle, current_user: User):
+    """Only creator or admin can modify/delete a vehicle."""
+    if vehicle.created_by_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this contract vehicle",
+        )
+
+
 @router.get("", response_model=List[ContractVehicleSchema])
 def get_vehicles(
     skip: int = Query(default=0, ge=0),
@@ -26,7 +35,7 @@ def get_vehicles(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    return db.query(ContractVehicle).offset(skip).limit(limit).all()
+    return db.query(ContractVehicle).order_by(ContractVehicle.name).offset(skip).limit(limit).all()
 
 
 @router.get("/{vehicle_id}", response_model=ContractVehicleSchema)
@@ -58,6 +67,7 @@ def create_vehicle(
         ceiling_value=vehicle.ceiling_value,
         prime_or_sub=vehicle.prime_or_sub,
         notes=vehicle.notes,
+        created_by_user_id=current_user.id,
     )
     db.add(new_vehicle)
     db.commit()
@@ -77,6 +87,8 @@ def update_vehicle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contract vehicle not found"
         )
+
+    _check_vehicle_authorization(vehicle, current_user)
 
     vehicle.name = vehicle_update.name
     vehicle.agency = vehicle_update.agency
@@ -104,6 +116,8 @@ def patch_vehicle(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contract vehicle not found"
         )
 
+    _check_vehicle_authorization(vehicle, current_user)
+
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(vehicle, field, value)
@@ -124,6 +138,8 @@ def delete_vehicle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contract vehicle not found"
         )
+
+    _check_vehicle_authorization(vehicle, current_user)
 
     db.delete(vehicle)
     db.commit()

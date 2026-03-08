@@ -38,9 +38,7 @@ def test_get_accounts(client, admin_headers, db, admin_user):
 def test_get_accounts_filter_by_type(client, admin_headers, db, admin_user):
     _make_account(db, account_type="government_agency")
     _make_account(db, name="Prime Co", account_type="prime_contractor")
-    response = client.get(
-        "/accounts?account_type=prime_contractor", headers=admin_headers
-    )
+    response = client.get("/accounts?account_type=prime_contractor", headers=admin_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -150,3 +148,49 @@ def test_delete_account(client, admin_headers, db, admin_user):
 def test_delete_account_not_found(client, admin_headers, admin_user):
     response = client.delete("/accounts/nonexistent", headers=admin_headers)
     assert response.status_code == 404
+
+
+# --- Authorization (creator/admin only for mutations) ---
+
+
+def test_update_account_forbidden_for_non_creator(
+    client, admin_headers, user_headers, db, admin_user, regular_user
+):
+    acct = _make_account(db, created_by_user_id=admin_user.id)
+    response = client.put(
+        f"/accounts/{acct.id}",
+        json={"name": "Hacked", "account_type": "vendor", "notes": ""},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_patch_account_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    acct = _make_account(db, created_by_user_id=admin_user.id)
+    response = client.patch(
+        f"/accounts/{acct.id}",
+        json={"name": "Hacked"},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_account_forbidden_for_non_creator(
+    client, user_headers, db, admin_user, regular_user
+):
+    acct = _make_account(db, created_by_user_id=admin_user.id)
+    response = client.delete(f"/accounts/{acct.id}", headers=user_headers)
+    assert response.status_code == 403
+
+
+def test_admin_can_modify_any_account(client, admin_headers, db, admin_user, regular_user):
+    acct = _make_account(db, created_by_user_id=regular_user.id)
+    response = client.patch(
+        f"/accounts/{acct.id}",
+        json={"name": "Admin Override"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "Admin Override"

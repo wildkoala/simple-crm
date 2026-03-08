@@ -17,9 +17,7 @@ contract_contacts = Table(
 opportunity_vehicles = Table(
     "opportunity_vehicles",
     Base.metadata,
-    Column(
-        "opportunity_id", String(36), ForeignKey("opportunities.id", ondelete="CASCADE")
-    ),
+    Column("opportunity_id", String(36), ForeignKey("opportunities.id", ondelete="CASCADE")),
     Column("vehicle_id", String(36), ForeignKey("contract_vehicles.id", ondelete="CASCADE")),
 )
 
@@ -37,6 +35,7 @@ class Account(Base):
     location = Column(String(300), nullable=True)
     website = Column(String(2048), nullable=True)
     notes = Column(Text, default="")
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -47,6 +46,7 @@ class Account(Base):
     # Relationships
     contacts = relationship("Contact", back_populates="account")
     teaming_records = relationship("Teaming", back_populates="partner_account")
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
 
 
 class Contact(Base):
@@ -204,6 +204,7 @@ class Opportunity(Base):
     win_probability = Column(Integer, nullable=True)  # 0-100
     notes = Column(Text, default="")
     created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -227,7 +228,9 @@ class Opportunity(Base):
         "Proposal", back_populates="opportunity", uselist=False, cascade="all, delete-orphan"
     )
     timeline_events = relationship(
-        "OpportunityEvent", back_populates="opportunity", cascade="all, delete-orphan",
+        "OpportunityEvent",
+        back_populates="opportunity",
+        cascade="all, delete-orphan",
         order_by="OpportunityEvent.date.desc()",
     )
     capture_notes = relationship(
@@ -253,6 +256,7 @@ class ContractVehicle(Base):
     ceiling_value = Column(Float, nullable=True)
     prime_or_sub = Column(String(10), nullable=True)  # prime, sub
     notes = Column(Text, default="")
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -264,18 +268,15 @@ class ContractVehicle(Base):
     opportunities = relationship(
         "Opportunity", secondary=opportunity_vehicles, back_populates="vehicles"
     )
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
 
 
 class Teaming(Base):
     __tablename__ = "teaming"
 
     id = Column(String(36), primary_key=True, index=True)
-    opportunity_id = Column(
-        String(36), ForeignKey("opportunities.id"), nullable=False, index=True
-    )
-    partner_account_id = Column(
-        String(36), ForeignKey("accounts.id"), nullable=False, index=True
-    )
+    opportunity_id = Column(String(36), ForeignKey("opportunities.id"), nullable=False, index=True)
+    partner_account_id = Column(String(36), ForeignKey("accounts.id"), nullable=False, index=True)
     role = Column(String(20), nullable=False)  # prime, subcontractor, jv_partner
     status = Column(
         String(20), nullable=False, default="potential"
@@ -381,6 +382,21 @@ class Attachment(Base):
     uploaded_by_user = relationship("User", foreign_keys=[uploaded_by_user_id])
 
 
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    action = Column(String(20), nullable=False)  # create, update, delete, restore
+    entity_type = Column(String(50), nullable=False, index=True)
+    entity_id = Column(String(36), nullable=False, index=True)
+    details = Column(Text, default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+
+
 class Compliance(Base):
     __tablename__ = "compliance"
 
@@ -395,9 +411,13 @@ class Compliance(Base):
         String(20), nullable=False, default="active"
     )  # active, expiring_soon, expired, pending
     notes = Column(Text, default="")
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+    # Relationships
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])

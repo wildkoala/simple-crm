@@ -1,6 +1,8 @@
 """Tests for opportunities CRUD, pipeline metrics, and filtering."""
 
-from app.models.models import ContractVehicle, Opportunity
+from unittest.mock import patch
+
+from app.models.models import ContractVehicle, Opportunity, Proposal
 from app.utils import generate_id
 
 
@@ -133,9 +135,20 @@ def test_pipeline_metrics_empty(client, admin_headers, admin_user):
 
 
 def test_pipeline_metrics_with_data(client, admin_headers, db, admin_user):
-    _make_opportunity(db, admin_user.id, estimated_value=10000000, win_probability=50, stage="capture")
-    _make_opportunity(db, admin_user.id, title="Won", estimated_value=5000000, win_probability=100, stage="awarded")
-    _make_opportunity(db, admin_user.id, title="Lost", estimated_value=3000000, win_probability=0, stage="lost")
+    _make_opportunity(
+        db, admin_user.id, estimated_value=10000000, win_probability=50, stage="capture"
+    )
+    _make_opportunity(
+        db,
+        admin_user.id,
+        title="Won",
+        estimated_value=5000000,
+        win_probability=100,
+        stage="awarded",
+    )
+    _make_opportunity(
+        db, admin_user.id, title="Lost", estimated_value=3000000, win_probability=0, stage="lost"
+    )
     response = client.get("/opportunities/pipeline", headers=admin_headers)
     assert response.status_code == 200
     data = response.json()
@@ -206,9 +219,7 @@ def test_create_opportunity_auto_proposal(client, admin_headers, admin_user):
     opp_id = response.json()["id"]
 
     # Check proposal was created
-    proposals = client.get(
-        f"/proposals?opportunity_id={opp_id}", headers=admin_headers
-    )
+    proposals = client.get(f"/proposals?opportunity_id={opp_id}", headers=admin_headers)
     assert proposals.status_code == 200
     assert len(proposals.json()) == 1
 
@@ -259,9 +270,7 @@ def test_update_opportunity_creates_proposal_on_stage_change(client, admin_heade
     )
     assert response.status_code == 200
 
-    proposals = client.get(
-        f"/proposals?opportunity_id={opp.id}", headers=admin_headers
-    )
+    proposals = client.get(f"/proposals?opportunity_id={opp.id}", headers=admin_headers)
     assert len(proposals.json()) == 1
 
 
@@ -327,9 +336,7 @@ def test_patch_opportunity_auto_proposal(client, admin_headers, db, admin_user):
     )
     assert response.status_code == 200
 
-    proposals = client.get(
-        f"/proposals?opportunity_id={opp.id}", headers=admin_headers
-    )
+    proposals = client.get(f"/proposals?opportunity_id={opp.id}", headers=admin_headers)
     assert len(proposals.json()) == 1
 
 
@@ -369,3 +376,175 @@ def test_vehicle_ids_property(db, admin_user):
     db.commit()
     db.refresh(opp)
     assert opp.vehicle_ids == [v.id]
+
+
+def test_update_to_proposal_stage_skips_if_proposal_exists(client, admin_headers, db, admin_user):
+    """If a proposal already exists, updating to proposal stage doesn't error."""
+    opp = _make_opportunity(db, admin_user.id, stage="capture")
+    # Pre-create a proposal
+    p = Proposal(
+        id=generate_id(),
+        opportunity_id=opp.id,
+        proposal_manager_id=admin_user.id,
+        status="not_started",
+        notes="",
+    )
+    db.add(p)
+    db.commit()
+
+    response = client.put(
+        f"/opportunities/{opp.id}",
+        json={
+            "title": opp.title,
+            "stage": "proposal",
+            "notes": "",
+            "vehicle_ids": [],
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+
+    # Still only one proposal
+    proposals = client.get(f"/proposals?opportunity_id={opp.id}", headers=admin_headers)
+    assert len(proposals.json()) == 1
+
+
+def test_patch_to_proposal_stage_skips_if_proposal_exists(client, admin_headers, db, admin_user):
+    """PATCH to proposal stage when proposal already exists is safe."""
+    opp = _make_opportunity(db, admin_user.id, stage="teaming")
+    p = Proposal(
+        id=generate_id(),
+        opportunity_id=opp.id,
+        proposal_manager_id=admin_user.id,
+        status="not_started",
+        notes="",
+    )
+    db.add(p)
+    db.commit()
+
+    response = client.patch(
+        f"/opportunities/{opp.id}",
+        json={"stage": "proposal"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+
+    proposals = client.get(f"/proposals?opportunity_id={opp.id}", headers=admin_headers)
+    assert len(proposals.json()) == 1
+
+
+def test_auto_create_proposal_handles_integrity_error(db, admin_user):
+    """IntegrityError during concurrent proposal creation is caught gracefully."""
+    from app.routers.opportunities import _auto_create_proposal
+
+    opp = _make_opportunity(db, admin_user.id, stage="capture")
+
+    # Pre-create a proposal so the savepoint INSERT will violate uniqueness
+    p = Proposal(
+        id=generate_id(),
+        opportunity_id=opp.id,
+        proposal_manager_id=admin_user.id,
+        status="not_started",
+        notes="",
+    )
+    db.add(p)
+    db.commit()
+
+    # Patch the existing-check to return None (simulating TOCTOU race)
+    with patch("app.routers.opportunities.db_query_proposal_exists", create=True):
+        original_query = db.query
+
+        def query_no_existing(*args, **kwargs):
+            q = original_query(*args, **kwargs)
+            if args and args[0] is Proposal:
+
+                class WrappedQuery:
+                    def __init__(self, inner):
+                        self._inner = inner
+
+                    def filter(self, *a, **k):
+                        return WrappedQuery(self._inner.filter(*a, **k))
+
+                    def first(self):
+                        return None  # Pretend no proposal exists
+
+                return WrappedQuery(q)
+            return q
+
+        db.query = query_no_existing
+        # Should not raise - IntegrityError is caught internally
+        _auto_create_proposal(opp, admin_user, db)
+        db.query = original_query
+
+    # Still only one proposal
+    count = db.query(Proposal).filter(Proposal.opportunity_id == opp.id).count()
+    assert count == 1
+
+
+# --- Soft delete & restore ---
+
+
+def test_soft_delete_keeps_record_in_db(client, admin_headers, db, admin_user):
+    """Soft delete sets deleted_at but keeps the record."""
+    opp = _make_opportunity(db, admin_user.id)
+    client.delete(f"/opportunities/{opp.id}", headers=admin_headers)
+
+    # Record still exists in DB with deleted_at set
+    db.expire_all()
+    record = db.query(Opportunity).filter(Opportunity.id == opp.id).first()
+    assert record is not None
+    assert record.deleted_at is not None
+
+
+def test_soft_deleted_excluded_from_list(client, admin_headers, db, admin_user):
+    """Soft-deleted opportunities don't appear in the list."""
+    opp = _make_opportunity(db, admin_user.id)
+    client.delete(f"/opportunities/{opp.id}", headers=admin_headers)
+
+    response = client.get("/opportunities", headers=admin_headers)
+    ids = [o["id"] for o in response.json()]
+    assert opp.id not in ids
+
+
+def test_soft_deleted_excluded_from_pipeline(client, admin_headers, db, admin_user):
+    """Soft-deleted opportunities don't count in pipeline metrics."""
+    opp = _make_opportunity(db, admin_user.id, estimated_value=1_000_000)
+    client.delete(f"/opportunities/{opp.id}", headers=admin_headers)
+
+    response = client.get("/opportunities/pipeline", headers=admin_headers)
+    assert response.json()["total_opportunities"] == 0
+
+
+def test_restore_opportunity(client, admin_headers, db, admin_user):
+    """Admin can restore a soft-deleted opportunity."""
+    opp = _make_opportunity(db, admin_user.id)
+    client.delete(f"/opportunities/{opp.id}", headers=admin_headers)
+
+    response = client.post(f"/opportunities/{opp.id}/restore", headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json()["deleted_at"] is None
+
+    # Visible again via GET
+    response = client.get(f"/opportunities/{opp.id}", headers=admin_headers)
+    assert response.status_code == 200
+
+
+def test_restore_opportunity_not_found(client, admin_headers, admin_user):
+    response = client.post("/opportunities/nonexistent/restore", headers=admin_headers)
+    assert response.status_code == 404
+
+
+def test_restore_active_opportunity_not_found(client, admin_headers, db, admin_user):
+    """Cannot restore an opportunity that isn't deleted."""
+    opp = _make_opportunity(db, admin_user.id)
+    response = client.post(f"/opportunities/{opp.id}/restore", headers=admin_headers)
+    assert response.status_code == 404
+
+
+def test_restore_opportunity_forbidden_for_non_admin(
+    client, admin_headers, user_headers, db, admin_user, regular_user
+):
+    opp = _make_opportunity(db, admin_user.id)
+    client.delete(f"/opportunities/{opp.id}", headers=admin_headers)
+    response = client.post(f"/opportunities/{opp.id}/restore", headers=user_headers)
+    assert response.status_code == 403

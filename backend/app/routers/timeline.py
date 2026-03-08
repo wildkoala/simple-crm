@@ -29,9 +29,11 @@ def get_timeline(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(
-        Opportunity.id == opportunity_id
-    ).first()
+    opp = (
+        db.query(Opportunity)
+        .filter(Opportunity.id == opportunity_id, Opportunity.deleted_at.is_(None))
+        .first()
+    )
     if not opp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -58,9 +60,11 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    opp = db.query(Opportunity).filter(
-        Opportunity.id == opportunity_id
-    ).first()
+    opp = (
+        db.query(Opportunity)
+        .filter(Opportunity.id == opportunity_id, Opportunity.deleted_at.is_(None))
+        .first()
+    )
     if not opp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -106,6 +110,13 @@ def update_event(
             detail="Event not found",
         )
 
+    # Only creator or admin can update
+    if event.created_by_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this event",
+        )
+
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(event, field, value)
@@ -137,6 +148,13 @@ def delete_event(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Event not found",
+        )
+
+    # Only creator or admin can delete
+    if event.created_by_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this event",
         )
 
     db.delete(event)

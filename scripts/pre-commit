@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+cd "$(git rev-parse --show-toplevel)/backend"
+
+if [ -f .venv/bin/activate ]; then
+    source .venv/bin/activate
+fi
+
+echo "=== Running ruff linter ==="
+if ! ruff check .; then
+    echo -e "${RED}Lint check failed. Fix errors before committing.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}Lint check passed.${NC}"
+
+echo ""
+echo "=== Running tests with coverage ==="
+if ! pytest --cov=app --cov-report=term-missing --cov-fail-under=100 -q; then
+    echo -e "${RED}Tests failed or coverage is below 100%. Fix before committing.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}All tests passed with 100% coverage.${NC}"

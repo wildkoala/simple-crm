@@ -56,9 +56,7 @@ def test_get_proposals_filter_by_opportunity(client, admin_headers, db, admin_us
     opp2 = _make_opportunity(db, admin_user.id, title="Other Opp")
     _make_proposal(db, opp1.id, admin_user.id)
     _make_proposal(db, opp2.id, admin_user.id)
-    response = client.get(
-        f"/proposals?opportunity_id={opp1.id}", headers=admin_headers
-    )
+    response = client.get(f"/proposals?opportunity_id={opp1.id}", headers=admin_headers)
     assert response.status_code == 200
     assert len(response.json()) == 1
 
@@ -190,3 +188,68 @@ def test_delete_proposal(client, admin_headers, db, admin_user):
 def test_delete_proposal_not_found(client, admin_headers, admin_user):
     response = client.delete("/proposals/nonexistent", headers=admin_headers)
     assert response.status_code == 404
+
+
+# --- Authorization ---
+
+
+def test_update_proposal_forbidden_for_non_owner(
+    client, user_headers, db, admin_user, regular_user
+):
+    """Regular user who is neither proposal manager nor opp creator gets 403."""
+    opp = _make_opportunity(db, admin_user.id)
+    p = _make_proposal(db, opp.id, admin_user.id)
+    response = client.put(
+        f"/proposals/{p.id}",
+        json={
+            "opportunity_id": opp.id,
+            "status": "in_progress",
+            "notes": "Hacked",
+        },
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_patch_proposal_forbidden_for_non_owner(client, user_headers, db, admin_user, regular_user):
+    opp = _make_opportunity(db, admin_user.id)
+    p = _make_proposal(db, opp.id, admin_user.id)
+    response = client.patch(
+        f"/proposals/{p.id}",
+        json={"status": "review"},
+        headers=user_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_proposal_forbidden_for_non_owner(
+    client, user_headers, db, admin_user, regular_user
+):
+    opp = _make_opportunity(db, admin_user.id)
+    p = _make_proposal(db, opp.id, admin_user.id)
+    response = client.delete(f"/proposals/{p.id}", headers=user_headers)
+    assert response.status_code == 403
+
+
+def test_proposal_manager_can_modify(client, user_headers, db, admin_user, regular_user):
+    """Proposal manager (even if not opp creator) can modify."""
+    opp = _make_opportunity(db, admin_user.id)
+    p = _make_proposal(db, opp.id, regular_user.id)
+    response = client.patch(
+        f"/proposals/{p.id}",
+        json={"status": "review"},
+        headers=user_headers,
+    )
+    assert response.status_code == 200
+
+
+def test_opp_creator_can_modify_proposal(client, user_headers, db, admin_user, regular_user):
+    """Opportunity creator can modify proposal even if not manager."""
+    opp = _make_opportunity(db, regular_user.id)
+    p = _make_proposal(db, opp.id, admin_user.id)
+    response = client.patch(
+        f"/proposals/{p.id}",
+        json={"status": "review"},
+        headers=user_headers,
+    )
+    assert response.status_code == 200

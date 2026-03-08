@@ -85,9 +85,7 @@ def _get_user_from_jwt(token: str, db: Session) -> User:
     if user is None:
         raise credentials_exception
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user account")
     return user
 
 
