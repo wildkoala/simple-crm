@@ -101,8 +101,40 @@ class Communication(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
+    # Email-specific fields (populated for Gmail-synced communications)
+    subject = Column(String(500), nullable=True)
+    email_from = Column(String(255), nullable=True)
+    email_to = Column(String(500), nullable=True)
+    body_html = Column(Text, nullable=True)
+    gmail_message_id = Column(String(255), nullable=True, unique=True, index=True)
+    gmail_thread_id = Column(String(255), nullable=True, index=True)
+    direction = Column(String(10), nullable=True)  # inbound, outbound
+
     # Relationships
     contact = relationship("Contact", back_populates="communications")
+
+
+class GmailIntegration(Base):
+    __tablename__ = "gmail_integrations"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    access_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=False)
+    token_expiry = Column(DateTime, nullable=True)
+    gmail_address = Column(String(255), nullable=False)
+    history_id = Column(String(50), nullable=True)
+    watch_expiry = Column(DateTime, nullable=True)
+    last_sync_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    user = relationship("User", back_populates="gmail_integration")
 
 
 class Contract(Base):
@@ -170,6 +202,9 @@ class User(Base):
         "Proposal",
         back_populates="proposal_manager",
         foreign_keys="Proposal.proposal_manager_id",
+    )
+    gmail_integration = relationship(
+        "GmailIntegration", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
 

@@ -22,6 +22,7 @@ Simple CRM is a straightforward customer relationship management system built sp
 - **User Management**: Multi-user support with admin controls
 - **API Integration**: RESTful API with JWT and API key authentication
 - **SAM.gov Integration**: Import contract opportunities from SAM.gov via the govbizops scraper
+- **Gmail Integration**: Sync and send emails through the CRM per contact (see [Gmail Integration](#gmail-integration))
 
 ## Technologies
 
@@ -73,6 +74,10 @@ Environment variables can be overridden in a `.env` file at the project root or 
 | `ENV` | `development` | Set to `production` to disable seed data and debug features |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warning`, `error`) |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Backend URL used by the frontend at build time |
+| `GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID for Gmail integration |
+| `GOOGLE_CLIENT_SECRET` | *(empty)* | Google OAuth2 client secret |
+| `GOOGLE_REDIRECT_URI` | `http://localhost:8000/gmail/callback` | OAuth2 callback URL |
+| `GOOGLE_PUBSUB_TOPIC` | *(empty)* | Pub/Sub topic for Gmail push notifications |
 
 Example production deployment:
 
@@ -205,6 +210,78 @@ simple-crm/
     ├── dev.sh                # Development launcher (Linux/Mac)
     └── dev.bat               # Development launcher (Windows)
 ```
+
+## Gmail Integration
+
+Connect your Gmail account to sync emails with contacts and send emails directly from the CRM.
+
+### Capabilities
+
+- **Automatic email sync** - Emails are synced automatically via Google Pub/Sub push notifications. New emails in the INBOX are matched to contacts by email address and appear in the contact's Communications tab with subject, sender, direction (sent/received), and full body.
+- **Send emails** - Compose and send emails to contacts through Gmail without leaving the CRM. Sent emails are automatically logged as communications.
+- **Reply threading** - Reply to received emails with proper Gmail threading preserved.
+- **Per-user** - Each CRM user connects their own Gmail account independently.
+
+### Setup
+
+#### 1. Create Google Cloud Credentials
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select an existing one)
+3. Enable the **Gmail API** and **Cloud Pub/Sub API**: navigate to **APIs & Services > Library**, search for each, and click **Enable**
+4. Configure the **OAuth consent screen**:
+   - Navigate to **APIs & Services > OAuth consent screen**
+   - Choose **External** user type (or **Internal** if using Google Workspace)
+   - Fill in app name, support email, and developer contact
+   - Add scopes: `gmail.readonly`, `gmail.send`, `userinfo.email`
+   - Add your email(s) as test users (required while the app is in "Testing" status)
+5. Create **OAuth 2.0 credentials**:
+   - Navigate to **APIs & Services > Credentials**
+   - Click **Create Credentials > OAuth client ID**
+   - Application type: **Web application**
+   - Add authorized redirect URI: `http://localhost:8000/gmail/callback`
+   - Copy the **Client ID** and **Client Secret**
+
+#### 2. Configure Environment Variables
+
+Add to your `backend/.env` (or your root `.env` for Docker Compose):
+
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/gmail/callback
+GOOGLE_PUBSUB_TOPIC=projects/your-project/topics/gmail-push
+```
+
+To set up Pub/Sub for automatic sync:
+
+1. Create a Pub/Sub topic (e.g., `gmail-push`) in Google Cloud Console
+2. Create a push subscription pointing to `https://your-domain/gmail/webhook`
+3. Grant `gmail-api-push@system.gserviceaccount.com` publish permission on the topic
+
+#### 3. Connect Your Account
+
+1. Log into the CRM
+2. Go to **API & Integrations** (settings page)
+3. Click **Connect Gmail** and authorize in the Google consent screen
+4. You'll be redirected back with Gmail connected
+
+#### 4. Usage
+
+On any contact's detail page:
+
+- Emails are synced automatically — new INBOX emails are pushed via Pub/Sub and matched to contacts
+- **Email** button - compose a new email to the contact
+- **Reply** link - reply to a received email (preserves Gmail threading)
+
+### Production Notes
+
+- Set `GOOGLE_REDIRECT_URI` to your production URL (e.g., `https://api.yourapp.com/gmail/callback`)
+- Add the production redirect URI to Google Cloud Console authorized redirect URIs
+- The Pub/Sub push subscription must point to your public `https://your-domain/gmail/webhook` endpoint
+- Gmail watches expire after 7 days; the system auto-renews watches when they are within 1 day of expiry
+- Submit your OAuth consent screen for Google verification if serving more than test users
+- Consider encrypting `access_token` and `refresh_token` columns at rest for additional security
 
 ## Security Notes
 

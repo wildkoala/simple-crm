@@ -135,8 +135,35 @@ class CommunicationCreate(CommunicationBase):
 class Communication(CommunicationBase):
     id: str
     created_at: datetime
+    subject: Optional[str] = None
+    email_from: Optional[str] = None
+    email_to: Optional[str] = None
+    body_html: Optional[str] = None
+    gmail_message_id: Optional[str] = None
+    gmail_thread_id: Optional[str] = None
+    direction: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Gmail Integration schemas
+class GmailIntegrationStatus(BaseModel):
+    connected: bool
+    gmail_address: Optional[str] = None
+    last_sync_at: Optional[datetime] = None
+
+
+class GmailAuthUrl(BaseModel):
+    auth_url: str
+
+
+class GmailSendRequest(BaseModel):
+    to: EmailStr
+    subject: str = Field(min_length=1, max_length=500)
+    body: str = Field(min_length=1, max_length=50000)
+    contact_id: str
+    reply_to_message_id: Optional[str] = None
+    thread_id: Optional[str] = None
 
 
 # Contract schemas

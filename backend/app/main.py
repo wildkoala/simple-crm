@@ -22,6 +22,7 @@ from app.routers import (
     contacts,
     contacts_followup,
     contracts,
+    gmail,
     opportunities,
     proposals,
     sam_gov,
@@ -113,6 +114,7 @@ app.include_router(teaming.router)
 app.include_router(proposals.router)
 app.include_router(compliance.router)
 app.include_router(sam_gov.router)
+app.include_router(gmail.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 

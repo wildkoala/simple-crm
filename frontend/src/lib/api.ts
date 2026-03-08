@@ -207,6 +207,13 @@ export interface Communication {
   type: 'email' | 'phone' | 'meeting' | 'other';
   notes: string;
   created_at: string;
+  subject?: string;
+  email_from?: string;
+  email_to?: string;
+  body_html?: string;
+  gmail_message_id?: string;
+  gmail_thread_id?: string;
+  direction?: 'inbound' | 'outbound';
 }
 
 export interface CommunicationCreate {
@@ -803,4 +810,43 @@ export async function updateCompliance(id: string, record: ComplianceCreate): Pr
 
 export async function deleteCompliance(id: string): Promise<void> {
   return fetchApi<void>(`/compliance/${id}`, { method: 'DELETE' });
+}
+
+// Gmail Integration API
+export interface GmailStatus {
+  connected: boolean;
+  gmail_address?: string;
+  last_sync_at?: string;
+}
+
+export interface GmailAuthUrl {
+  auth_url: string;
+}
+
+export interface GmailSendRequest {
+  to: string;
+  subject: string;
+  body: string;
+  contact_id: string;
+  reply_to_message_id?: string;
+  thread_id?: string;
+}
+
+export async function getGmailStatus(): Promise<GmailStatus> {
+  return fetchApi<GmailStatus>('/gmail/status');
+}
+
+export async function getGmailAuthUrl(): Promise<GmailAuthUrl> {
+  return fetchApi<GmailAuthUrl>('/gmail/auth-url');
+}
+
+export async function disconnectGmail(): Promise<void> {
+  return fetchApi<void>('/gmail/disconnect', { method: 'DELETE' });
+}
+
+export async function sendGmailEmail(request: GmailSendRequest): Promise<Communication> {
+  return fetchApi<Communication>('/gmail/send', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }

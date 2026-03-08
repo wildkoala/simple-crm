@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-crm}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
       POSTGRES_DB: ${POSTGRES_DB:-crm}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -24,13 +24,17 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD:?Error}@db:5432/${POSTGRES_DB:-crm}
-      SECRET_KEY: ${SECRET_KEY:?Error: SECRET_KEY must be set}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD:-crm}@db:5432/${POSTGRES_DB:-crm}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: "60"
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ENV: ${ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8000/gmail/callback}
+      GOOGLE_PUBSUB_TOPIC: ${GOOGLE_PUBSUB_TOPIC:-}
     ports:
       - "8000:8000"
     depends_on:
