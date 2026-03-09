@@ -3,8 +3,11 @@ import {
   getAuthToken,
   setAuthToken,
   clearAuthToken,
+  getRefreshToken,
+  setRefreshToken,
   login,
   getCurrentUser,
+  getContacts,
   deleteContact,
 } from './api';
 
@@ -200,5 +203,204 @@ describe('fetchApi (via exported functions)', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [, opts] = fetchSpy.mock.calls[0];
     expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe('token refresh', () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    localStorage.clear();
+    fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('refreshes the token on 401 for non-auth endpoints and retries', async () => {
+    setAuthToken('expired-token');
+    setRefreshToken('valid-refresh');
+
+    const mockContacts = [{ id: 'c1', first_name: 'John' }];
+
+    // First call: 401 (expired access token)
+    // Second call: refresh endpoint succeeds
+    // Third call: retry of original request succeeds
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ access_token: 'new-access', refresh_token: 'new-refresh' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockContacts),
+      });
+
+    const result = await getContacts();
+
+    expect(result).toEqual(mockContacts);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    // Verify refresh endpoint was called
+    expect(fetchSpy.mock.calls[1][0]).toContain('/auth/refresh');
+    // Verify new tokens were stored
+    expect(getAuthToken()).toBe('new-access');
+    expect(getRefreshToken()).toBe('new-refresh');
+  });
+
+  it('does not attempt refresh for /auth/ endpoints', async () => {
+    setAuthToken('expired-token');
+    setRefreshToken('valid-refresh');
+
+    const eventHandler = vi.fn();
+    window.addEventListener('auth:unauthorized', eventHandler);
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve(JSON.stringify({ detail: 'Not authenticated' })),
+    });
+
+    await expect(getCurrentUser()).rejects.toThrow('Not authenticated');
+    // Only 1 call — no refresh attempted since getCurrentUser calls /auth/me
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(getAuthToken()).toBeNull();
+
+    window.removeEventListener('auth:unauthorized', eventHandler);
+  });
+
+  it('falls back to logout when refresh fails', async () => {
+    setAuthToken('expired-token');
+    setRefreshToken('bad-refresh');
+
+    const eventHandler = vi.fn();
+    window.addEventListener('auth:unauthorized', eventHandler);
+
+    // First call: 401 on non-auth endpoint
+    // Second call: refresh endpoint also fails
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ detail: 'Invalid refresh token' }),
+      });
+
+    await expect(getContacts()).rejects.toThrow();
+    expect(getAuthToken()).toBeNull();
+    expect(eventHandler).toHaveBeenCalledOnce();
+
+    window.removeEventListener('auth:unauthorized', eventHandler);
+  });
+
+  it('does not attempt refresh when no refresh token exists', async () => {
+    setAuthToken('expired-token');
+    // No refresh token set
+
+    const eventHandler = vi.fn();
+    window.addEventListener('auth:unauthorized', eventHandler);
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+    });
+
+    await expect(getContacts()).rejects.toThrow();
+    // 1 original call + 1 refresh attempt (which returns false immediately since no refresh token)
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(eventHandler).toHaveBeenCalledOnce();
+
+    window.removeEventListener('auth:unauthorized', eventHandler);
+  });
+
+  it('deduplicates concurrent refresh attempts', async () => {
+    setAuthToken('expired-token');
+    setRefreshToken('valid-refresh');
+
+    const mockContacts = [{ id: 'c1', first_name: 'John' }];
+
+    // Both initial calls return 401
+    // Then one refresh call succeeds
+    // Then both retries succeed
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ access_token: 'new-access', refresh_token: 'new-refresh' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockContacts),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockContacts),
+      });
+
+    const [r1, r2] = await Promise.all([getContacts(), getContacts()]);
+
+    expect(r1).toEqual(mockContacts);
+    expect(r2).toEqual(mockContacts);
+    // Should have only 1 refresh call despite 2 concurrent 401s
+    const refreshCalls = fetchSpy.mock.calls.filter(
+      (call: [string, ...unknown[]]) => call[0].includes('/auth/refresh')
+    );
+    expect(refreshCalls).toHaveLength(1);
+  });
+
+  it('refresh request includes AbortSignal for timeout', async () => {
+    setAuthToken('expired-token');
+    setRefreshToken('valid-refresh');
+
+    const mockContacts = [{ id: 'c1', first_name: 'John' }];
+
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve(JSON.stringify({ detail: 'Token expired' })),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ access_token: 'new-access', refresh_token: 'new-refresh' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockContacts),
+      });
+
+    await getContacts();
+
+    // Second call is the refresh — verify it has an AbortSignal
+    const refreshCall = fetchSpy.mock.calls[1];
+    expect(refreshCall[1].signal).toBeInstanceOf(AbortSignal);
   });
 });

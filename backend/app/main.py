@@ -14,9 +14,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.database import SessionLocal, engine, get_db
+from app.database import SessionLocal, get_db
 from app.logging_config import generate_request_id, request_id_ctx, setup_logging
-from app.models.models import Base
 from app.routers import (
     accounts,
     attachments,
@@ -73,8 +72,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables and seed database
-    Base.metadata.create_all(bind=engine)
+    # Startup: seed database (schema managed by Alembic migrations via entrypoint.sh)
     db = SessionLocal()
     try:
         seed_database(db)

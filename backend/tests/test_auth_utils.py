@@ -277,9 +277,7 @@ def test_create_refresh_token():
 
 
 def test_create_refresh_token_custom_expiry():
-    token = create_refresh_token(
-        data={"sub": "test@example.com"}, expires_delta=timedelta(days=1)
-    )
+    token = create_refresh_token(data={"sub": "test@example.com"}, expires_delta=timedelta(days=1))
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     assert payload["sub"] == "test@example.com"
     assert payload["type"] == "refresh"

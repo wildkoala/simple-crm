@@ -19,6 +19,14 @@ fi
 echo -e "${GREEN}Lint check passed.${NC}"
 
 echo ""
+echo "=== Running ruff format check ==="
+if ! ruff format --check .; then
+    echo -e "${RED}Format check failed. Run 'ruff format .' to fix.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}Format check passed.${NC}"
+
+echo ""
 echo "=== Running tests with coverage ==="
 if ! pytest --cov=app --cov-report=term-missing --cov-fail-under=100 -q -W error::UserWarning -W error::FutureWarning; then
     echo -e "${RED}Tests failed or coverage is below 100%. Fix before committing.${NC}"

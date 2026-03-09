@@ -5,6 +5,7 @@
 # Usage:
 #   ./scripts/backup.sh                     # Backup using defaults
 #   ./scripts/backup.sh /path/to/backups    # Backup to custom directory
+#   ./scripts/backup.sh --install-cron      # Install nightly cron job (2 AM)
 #
 # Restore:
 #   gunzip -c backups/crm_2026-03-09_120000.sql.gz | \
@@ -22,6 +23,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# --install-cron: register a nightly cron job and exit
+if [ "${1:-}" = "--install-cron" ]; then
+    CRON_SCHEDULE="${2:-0 2 * * *}"
+    CRON_CMD="$CRON_SCHEDULE $SCRIPT_DIR/backup.sh >> $PROJECT_ROOT/backups/cron.log 2>&1"
+    # Remove any existing entry for this script, then append the new one
+    ( crontab -l 2>/dev/null | grep -v "$SCRIPT_DIR/backup.sh" ; echo "$CRON_CMD" ) | crontab -
+    echo "Cron job installed: $CRON_CMD"
+    echo "View with: crontab -l"
+    exit 0
+fi
 
 # Load environment
 if [ -f "$PROJECT_ROOT/.env" ]; then

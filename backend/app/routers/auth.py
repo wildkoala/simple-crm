@@ -162,7 +162,8 @@ def get_me(current_user: User = Depends(get_current_user_or_api_key)):
 
 
 @router.post("/refresh", response_model=Token)
-def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def refresh_token(request: Request, body: RefreshRequest, db: Session = Depends(get_db)):
     """Exchange a refresh token for a new access token + refresh token pair."""
     email = decode_refresh_token(body.refresh_token)
     if not email:

@@ -63,14 +63,12 @@ def test_lifespan_startup():
             pass
 
     with (
-        patch("app.main.Base.metadata.create_all") as mock_create,
         patch("app.main.seed_database") as mock_seed,
         patch("app.main.SessionLocal") as mock_session_cls,
     ):
         mock_db = MagicMock()
         mock_session_cls.return_value = mock_db
         asyncio.run(run_lifespan())
-        mock_create.assert_called_once()
         mock_seed.assert_called_once_with(mock_db)
         mock_db.close.assert_called_once()
 
@@ -95,7 +93,6 @@ def test_unhandled_exception_returns_json(admin_headers):
     from app.main import app
 
     with (
-        patch("app.main.Base.metadata.create_all"),
         patch("app.main.seed_database"),
         TestClient(app, raise_server_exceptions=False) as c,
         patch("app.routers.contacts.generate_id", side_effect=RuntimeError("boom")),

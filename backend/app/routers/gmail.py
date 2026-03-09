@@ -3,6 +3,7 @@ import base64
 import json
 import logging
 import os
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
@@ -197,7 +198,7 @@ async def gmail_webhook(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Missing webhook token"
             )
         token = auth_header.removeprefix("Bearer ").strip()
-        if token != GMAIL_WEBHOOK_TOKEN:
+        if not secrets.compare_digest(token, GMAIL_WEBHOOK_TOKEN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Invalid webhook token"
             )
