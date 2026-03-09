@@ -83,7 +83,7 @@ def gmail_callback(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?gmail=error&reason=invalid_state",
+            url=f"{FRONTEND_URL}/api-settings?gmail=error&reason=invalid_state",
             status_code=302,
         )
 
@@ -92,7 +92,7 @@ def gmail_callback(
     except Exception:
         logger.exception("Failed to exchange OAuth code")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?gmail=error&reason=auth_failed",
+            url=f"{FRONTEND_URL}/api-settings?gmail=error&reason=auth_failed",
             status_code=302,
         )
 
@@ -105,7 +105,7 @@ def gmail_callback(
     except Exception:
         logger.exception("Failed to get Gmail address")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}/settings?gmail=error&reason=email_lookup_failed",
+            url=f"{FRONTEND_URL}/api-settings?gmail=error&reason=email_lookup_failed",
             status_code=302,
         )
 
@@ -148,7 +148,7 @@ def gmail_callback(
         logger.exception("Initial Gmail sync failed")
 
     return RedirectResponse(
-        url=f"{FRONTEND_URL}/settings?gmail=connected",
+        url=f"{FRONTEND_URL}/api-settings?gmail=connected",
         status_code=302,
     )
 

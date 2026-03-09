@@ -47,15 +47,13 @@ GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 
 The `GOOGLE_CLIENT_SECRET` is only needed for Gmail integration, not for Google Sign-In.
 
-### 4. Configure the Frontend
+### 4. Configure the Client ID
 
-Set the following in `frontend/.env.local`:
+Set `GOOGLE_CLIENT_ID` in your root `.env`. It is shared with both the backend and frontend automatically:
 
 ```
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
-
-Use the same Client ID on both backend and frontend.
 
 ### 5. Configure the OAuth Consent Screen
 
@@ -87,21 +85,14 @@ When a user signs in with Google and a CRM account with their email already exis
 
 - Only Google accounts with verified emails are allowed.
 - Inactive CRM accounts cannot sign in, even with a valid Google identity.
-- The Google Sign-In button only appears on the login page when `VITE_GOOGLE_CLIENT_ID` is configured.
+- The Google Sign-In button only appears on the login page when `GOOGLE_CLIENT_ID` is configured.
 
 ## Visibility
 
-The "Sign in with Google" button on the login page is **only rendered when `VITE_GOOGLE_CLIENT_ID` is set** in the frontend environment. If the variable is empty or missing, the login page shows only the email/password form with no indication that Google sign-in exists.
+The "Sign in with Google" button on the login page is **only rendered when `GOOGLE_CLIENT_ID` is set**. If the variable is empty or missing, the login page shows only the email/password form with no indication that Google sign-in exists.
 
-Both environment variables must be set for the feature to work end-to-end:
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `VITE_GOOGLE_CLIENT_ID` | Frontend (`frontend/.env.local`) | Renders the Google button and initializes the Google Identity Services SDK |
-| `GOOGLE_CLIENT_ID` | Backend (`backend/.env`) | Verifies the Google ID token server-side |
-
-These must contain the **same** Client ID value.
+`GOOGLE_CLIENT_ID` is set once in the root `.env` and shared with both the backend (for token verification) and frontend (for the Google Identity Services SDK) via docker-compose and the Dockerfile.
 
 ## Disabling Google Sign-In
 
-To disable Google Sign-In, remove or leave empty the `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` environment variables. The Sign-In button will not appear on the login page, and the backend endpoint will return a 503 error if called directly.
+To disable Google Sign-In, remove or leave empty the `GOOGLE_CLIENT_ID` environment variable. The Sign-In button will not appear on the login page, and the backend endpoint will return a 503 error if called directly.

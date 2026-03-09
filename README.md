@@ -74,11 +74,10 @@ Environment variables can be overridden in a `.env` file at the project root or 
 | `SECRET_KEY` | `change-me-in-production` | JWT signing key |
 | `ENV` | `development` | Set to `production` to disable seed data and debug features |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warning`, `error`) |
-| `VITE_API_BASE_URL` | `http://localhost:8000` | Backend URL used by the frontend at build time |
-| `VITE_GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID for the frontend Sign-In button |
-| `GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID (backend - for token verification and Gmail) |
+| `VITE_API_BASE_URL` | `/api` (Docker) | Backend URL used by the frontend at build time |
+| `GOOGLE_CLIENT_ID` | *(empty)* | Google OAuth2 client ID (used by both backend and frontend) |
 | `GOOGLE_CLIENT_SECRET` | *(empty)* | Google OAuth2 client secret |
-| `GOOGLE_REDIRECT_URI` | `http://localhost:8000/gmail/callback` | OAuth2 callback URL |
+| `GOOGLE_REDIRECT_URI` | `{FRONTEND_URL}/api/gmail/callback` | OAuth2 callback URL (auto-derived if not set) |
 | `GOOGLE_PUBSUB_TOPIC` | *(empty)* | Pub/Sub topic for Gmail push notifications |
 
 Example production deployment:
@@ -215,29 +214,23 @@ simple-crm/
 
 ## Google Sign-In
 
-Users can sign in with their Google account instead of (or in addition to) email/password. The "Sign in with Google" button on the login page is **only visible when `VITE_GOOGLE_CLIENT_ID` is set** in the frontend environment.
+Users can sign in with their Google account instead of (or in addition to) email/password. The "Sign in with Google" button on the login page is **only visible when `GOOGLE_CLIENT_ID` is set**.
 
 ### Setup
 
 1. Create a Google Cloud project and OAuth2 web credentials (see [Gmail Integration](#gmail-integration) step 1 if you haven't already)
 2. In the OAuth2 credential, add your frontend URL as an **Authorized JavaScript origin** (e.g., `http://localhost:5173`)
-3. Set the **same Client ID** in both environments:
+3. Set `GOOGLE_CLIENT_ID` in your root `.env` (used by both backend and frontend):
 
-   **Backend** (`backend/.env`):
    ```env
    GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   ```
-
-   **Frontend** (`frontend/.env.local`):
-   ```env
-   VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
    ```
 
 4. Restart both services
 
 The Sign-In button will now appear on the login page. On first Google sign-in, a user account is created automatically. If an account with the same email already exists, the Google identity is linked to it.
 
-> **Note:** If `VITE_GOOGLE_CLIENT_ID` is not set, the login page shows only the email/password form. The backend `GOOGLE_CLIENT_ID` must also be set for token verification to work.
+> **Note:** If `GOOGLE_CLIENT_ID` is not set, the login page shows only the email/password form.
 
 ## Gmail Integration
 

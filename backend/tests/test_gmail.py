@@ -125,7 +125,7 @@ def test_gmail_callback_success(
     )
     assert resp.status_code == 302
     assert "gmail=connected" in resp.headers["location"]
-    assert "/settings" in resp.headers["location"]
+    assert "/api-settings" in resp.headers["location"]
 
     # Check integration was created
     integration = (

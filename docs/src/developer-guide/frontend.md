@@ -90,11 +90,11 @@ import { Plus, Trash2, Edit } from 'lucide-react';
 
 ## Environment Variables
 
-Frontend environment variables must be prefixed with `VITE_`:
+Frontend environment variables must be prefixed with `VITE_` for Vite to expose them:
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_API_BASE_URL` | Backend API URL (default: `http://localhost:8000`) |
-| `VITE_GOOGLE_CLIENT_ID` | Google client ID for Sign-In button |
+| `VITE_API_BASE_URL` | Backend API URL (`/api` in Docker, `http://localhost:8000` for local dev) |
+| `VITE_GOOGLE_CLIENT_ID` | Google client ID for Sign-In button (auto-set from `GOOGLE_CLIENT_ID` in Docker) |
 
-Set in `frontend/.env.local` for development.
+Set in `frontend/.env.local` for local development outside Docker. In Docker, `GOOGLE_CLIENT_ID` from the root `.env` is mapped to `VITE_GOOGLE_CLIENT_ID` automatically by the Dockerfile.

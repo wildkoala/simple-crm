@@ -52,12 +52,11 @@ The frontend uses a single environment variable:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VITE_API_BASE_URL` | `http://localhost:8000` | Backend API URL |
-| `VITE_GOOGLE_CLIENT_ID` | *(empty)* | Google client ID -- shows Google Sign-In button on login page when set |
+| `VITE_API_BASE_URL` | `/api` (Docker) | Backend API URL |
 
-Set frontend variables in `frontend/.env.local` or as build-time environment variables.
+`GOOGLE_CLIENT_ID` from the root `.env` is automatically passed to the frontend build via the Dockerfile. Set `VITE_API_BASE_URL` in `frontend/.env.local` only for local dev outside Docker.
 
-> **Note:** The Google Sign-In button on the login page is only visible when `VITE_GOOGLE_CLIENT_ID` is set. If omitted, users will only see the email/password form.
+> **Note:** The Google Sign-In button on the login page is only visible when `GOOGLE_CLIENT_ID` is set. If omitted, users will only see the email/password form.
 
 ## Production Checklist
 

@@ -6,6 +6,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,7 +20,10 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User
 
-load_dotenv()
+# Load backend/.env first as defaults, then root .env as overrides
+_backend_dir = Path(__file__).resolve().parent.parent
+load_dotenv(_backend_dir / ".env")
+load_dotenv(_backend_dir.parent / ".env", override=True)
 
 logger = logging.getLogger(__name__)
 

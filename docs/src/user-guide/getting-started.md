@@ -22,7 +22,7 @@ If your administrator has enabled Google authentication, a **Sign in with Google
 
 On first Google sign-in, an account is automatically created for you. If an account with your Google email already exists, it will be linked to your Google identity.
 
-> **Note:** The Google Sign-In button is only visible when the `VITE_GOOGLE_CLIENT_ID` environment variable is configured on the frontend.
+> **Note:** The Google Sign-In button is only visible when the `GOOGLE_CLIENT_ID` environment variable is configured.
 
 ### Forgot Password
 
