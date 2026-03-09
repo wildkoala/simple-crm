@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import DOMPurify from 'dompurify';
 import * as api from '@/lib/api';
 import { ArrowLeft, Edit, Trash2, Plus, Mail, Phone, Building, Loader2, User as UserIcon, Send, Reply, Inbox, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -464,7 +465,7 @@ export default function ContactDetail() {
                                   {comm.body_html ? (
                                     <div
                                       className="text-sm prose prose-sm max-w-none"
-                                      dangerouslySetInnerHTML={{ __html: comm.body_html }}
+                                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comm.body_html) }}
                                     />
                                   ) : (
                                     <p className="text-sm whitespace-pre-wrap">{comm.notes}</p>

@@ -109,8 +109,13 @@ def test_gmail_auth_url_success(mock_flow_cls, client, admin_headers, admin_user
 @patch("app.routers.gmail.get_gmail_address")
 @patch("app.routers.gmail.exchange_code")
 def test_gmail_callback_success(
-    mock_exchange, mock_get_email, mock_start_watch, mock_initial_sync,
-    client, admin_user, db,
+    mock_exchange,
+    mock_get_email,
+    mock_start_watch,
+    mock_initial_sync,
+    client,
+    admin_user,
+    db,
 ):
     mock_exchange.return_value = {
         "access_token": "new_access_token",
@@ -129,9 +134,7 @@ def test_gmail_callback_success(
 
     # Check integration was created
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == admin_user.id)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == admin_user.id).first()
     )
     assert integration is not None
     assert integration.access_token == "new_access_token"
@@ -147,8 +150,14 @@ def test_gmail_callback_success(
 @patch("app.routers.gmail.get_gmail_address")
 @patch("app.routers.gmail.exchange_code")
 def test_gmail_callback_updates_existing(
-    mock_exchange, mock_get_email, mock_start_watch, mock_initial_sync,
-    client, admin_user, gmail_integration, db,
+    mock_exchange,
+    mock_get_email,
+    mock_start_watch,
+    mock_initial_sync,
+    client,
+    admin_user,
+    gmail_integration,
+    db,
 ):
     mock_exchange.return_value = {
         "access_token": "updated_token",
@@ -173,8 +182,13 @@ def test_gmail_callback_updates_existing(
 @patch("app.routers.gmail.get_gmail_address")
 @patch("app.routers.gmail.exchange_code")
 def test_gmail_callback_watch_failure_non_fatal(
-    mock_exchange, mock_get_email, mock_start_watch, mock_initial_sync,
-    client, admin_user, db,
+    mock_exchange,
+    mock_get_email,
+    mock_start_watch,
+    mock_initial_sync,
+    client,
+    admin_user,
+    db,
 ):
     """start_watch failure should not prevent callback from succeeding."""
     mock_exchange.return_value = {
@@ -196,8 +210,12 @@ def test_gmail_callback_watch_failure_non_fatal(
 @patch("app.routers.gmail.get_gmail_address")
 @patch("app.routers.gmail.exchange_code")
 def test_gmail_callback_initial_sync_failure_non_fatal(
-    mock_exchange, mock_get_email, mock_start_watch,
-    client, admin_user, db,
+    mock_exchange,
+    mock_get_email,
+    mock_start_watch,
+    client,
+    admin_user,
+    db,
 ):
     """initial_sync failure should not prevent callback from succeeding."""
     mock_exchange.return_value = {
@@ -207,9 +225,7 @@ def test_gmail_callback_initial_sync_failure_non_fatal(
     }
     mock_get_email.return_value = "a@gmail.com"
 
-    with patch(
-        "app.routers.gmail.initial_sync", side_effect=Exception("sync err")
-    ):
+    with patch("app.routers.gmail.initial_sync", side_effect=Exception("sync err")):
         resp = client.get(
             f"/gmail/callback?code=c&state={admin_user.id}",
             follow_redirects=False,
@@ -240,9 +256,7 @@ def test_gmail_callback_exchange_failure(mock_exchange, client, admin_user):
 
 @patch("app.routers.gmail.exchange_code")
 @patch("app.routers.gmail.get_gmail_address", side_effect=Exception("API error"))
-def test_gmail_callback_email_fetch_failure(
-    mock_get_email, mock_exchange, client, admin_user
-):
+def test_gmail_callback_email_fetch_failure(mock_get_email, mock_exchange, client, admin_user):
     mock_exchange.return_value = {
         "access_token": "token",
         "refresh_token": "refresh",
@@ -262,15 +276,18 @@ def test_gmail_callback_email_fetch_failure(
 
 @patch("app.routers.gmail.stop_watch")
 def test_gmail_disconnect_success(
-    mock_stop_watch, client, admin_headers, gmail_integration, db, admin_user,
+    mock_stop_watch,
+    client,
+    admin_headers,
+    gmail_integration,
+    db,
+    admin_user,
 ):
     resp = client.delete("/gmail/disconnect", headers=admin_headers)
     assert resp.status_code == 204
 
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == admin_user.id)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == admin_user.id).first()
     )
     assert integration is None
     mock_stop_watch.assert_called_once()
@@ -286,9 +303,7 @@ def test_gmail_disconnect_not_connected(client, admin_headers):
 
 def _make_webhook_body(email_address: str, history_id: str) -> dict:
     """Build a Pub/Sub push notification body."""
-    data = json.dumps(
-        {"emailAddress": email_address, "historyId": history_id}
-    ).encode()
+    data = json.dumps({"emailAddress": email_address, "historyId": history_id}).encode()
     return {"message": {"data": base64.urlsafe_b64encode(data).decode()}}
 
 
@@ -328,9 +343,7 @@ def test_gmail_webhook_invalid_base64_data(client):
 
 def test_gmail_webhook_missing_fields(client):
     data = json.dumps({"emailAddress": "", "historyId": ""}).encode()
-    body = {
-        "message": {"data": base64.urlsafe_b64encode(data).decode()}
-    }
+    body = {"message": {"data": base64.urlsafe_b64encode(data).decode()}}
     resp = client.post("/gmail/webhook", json=body)
     assert resp.status_code == 200
     assert resp.json()["reason"] == "missing fields"
@@ -371,9 +384,7 @@ def test_gmail_send_not_connected(client, admin_headers, sample_contact):
     assert resp.status_code == 400
 
 
-def test_gmail_send_contact_not_found(
-    client, admin_headers, gmail_integration
-):
+def test_gmail_send_contact_not_found(client, admin_headers, gmail_integration):
     resp = client.post(
         "/gmail/send",
         headers=admin_headers,
@@ -405,7 +416,12 @@ def test_gmail_send_contact_not_owned(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_gmail_send_success(
-    mock_build, client, admin_headers, gmail_integration, sample_contact, db,
+    mock_build,
+    client,
+    admin_headers,
+    gmail_integration,
+    sample_contact,
+    db,
 ):
     mock_service = MagicMock()
     mock_build.return_value = mock_service
@@ -434,17 +450,18 @@ def test_gmail_send_success(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_gmail_send_reply(
-    mock_build, client, admin_headers, gmail_integration, sample_contact, db,
+    mock_build,
+    client,
+    admin_headers,
+    gmail_integration,
+    sample_contact,
+    db,
 ):
     mock_service = MagicMock()
     mock_build.return_value = mock_service
 
     mock_service.users().messages().get().execute.return_value = {
-        "payload": {
-            "headers": [
-                {"name": "Message-ID", "value": "<original@example.com>"}
-            ]
-        }
+        "payload": {"headers": [{"name": "Message-ID", "value": "<original@example.com>"}]}
     }
     mock_service.users().messages().send().execute.return_value = {
         "id": "reply_msg_1",
@@ -488,9 +505,7 @@ def test_gmail_send_api_failure(
     assert resp.status_code == 502
 
 
-def test_gmail_send_validation_no_subject(
-    client, admin_headers, gmail_integration, sample_contact
-):
+def test_gmail_send_validation_no_subject(client, admin_headers, gmail_integration, sample_contact):
     resp = client.post(
         "/gmail/send",
         headers=admin_headers,
@@ -522,14 +537,16 @@ def test_gmail_send_validation_invalid_email(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_gmail_send_reply_header_fetch_error(
-    mock_build, client, admin_headers, gmail_integration, sample_contact,
+    mock_build,
+    client,
+    admin_headers,
+    gmail_integration,
+    sample_contact,
 ):
     mock_service = MagicMock()
     mock_build.return_value = mock_service
 
-    mock_service.users().messages().get().execute.side_effect = Exception(
-        "Cannot fetch"
-    )
+    mock_service.users().messages().get().execute.side_effect = Exception("Cannot fetch")
     mock_service.users().messages().send().execute.return_value = {
         "id": "reply_despite_err",
         "threadId": "thread_x",
@@ -669,17 +686,11 @@ def test_user_gmail_integration_cascade_delete(db, admin_user, gmail_integration
     db.delete(admin_user)
     db.commit()
 
-    result = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.id == integration_id)
-        .first()
-    )
+    result = db.query(GmailIntegration).filter(GmailIntegration.id == integration_id).first()
     assert result is None
 
 
-def test_gmail_communication_schema_has_email_fields(
-    client, admin_headers, sample_contact, db
-):
+def test_gmail_communication_schema_has_email_fields(client, admin_headers, sample_contact, db):
     comm = Communication(
         id=generate_id(),
         contact_id=sample_contact.id,
@@ -738,8 +749,11 @@ def test_find_contact_inbound(db, admin_user, sample_contact):
     from app.services.gmail_service import _find_contact_for_message
 
     contact = _find_contact_for_message(
-        db, admin_user.id, "admin@gmail.com",
-        "john@example.com", "admin@gmail.com",
+        db,
+        admin_user.id,
+        "admin@gmail.com",
+        "john@example.com",
+        "admin@gmail.com",
     )
     assert contact is not None
     assert contact.id == sample_contact.id
@@ -749,8 +763,11 @@ def test_find_contact_outbound(db, admin_user, sample_contact):
     from app.services.gmail_service import _find_contact_for_message
 
     contact = _find_contact_for_message(
-        db, admin_user.id, "admin@gmail.com",
-        "admin@gmail.com", "john@example.com",
+        db,
+        admin_user.id,
+        "admin@gmail.com",
+        "admin@gmail.com",
+        "john@example.com",
     )
     assert contact is not None
     assert contact.id == sample_contact.id
@@ -760,8 +777,11 @@ def test_find_contact_no_match(db, admin_user, sample_contact):
     from app.services.gmail_service import _find_contact_for_message
 
     contact = _find_contact_for_message(
-        db, admin_user.id, "admin@gmail.com",
-        "unknown@other.com", "admin@gmail.com",
+        db,
+        admin_user.id,
+        "admin@gmail.com",
+        "unknown@other.com",
+        "admin@gmail.com",
     )
     assert contact is None
 
@@ -801,24 +821,21 @@ def _make_gmail_message(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_message_creates_comm(
-    mock_build, db, gmail_integration, sample_contact,
+    mock_build,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message()
-    )
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message()
 
     result = _process_message(db, mock_service, "msg_1", gmail_integration)
     assert result is True
 
     db.flush()
-    comm = (
-        db.query(Communication)
-        .filter(Communication.gmail_message_id == "msg_1")
-        .first()
-    )
+    comm = db.query(Communication).filter(Communication.gmail_message_id == "msg_1").first()
     assert comm is not None
     assert comm.subject == "Test email"
     assert comm.direction == "inbound"
@@ -827,28 +844,25 @@ def test_process_message_creates_comm(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_message_outbound(
-    mock_build, db, gmail_integration, sample_contact,
+    mock_build,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(
-            from_addr="admin@gmail.com",
-            to_addr="john@example.com",
-            labels=["SENT"],
-        )
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        from_addr="admin@gmail.com",
+        to_addr="john@example.com",
+        labels=["SENT"],
     )
 
     result = _process_message(db, mock_service, "out_1", gmail_integration)
     assert result is True
 
     db.flush()
-    comm = (
-        db.query(Communication)
-        .filter(Communication.gmail_message_id == "out_1")
-        .first()
-    )
+    comm = db.query(Communication).filter(Communication.gmail_message_id == "out_1").first()
     assert comm.direction == "outbound"
 
 
@@ -878,22 +892,22 @@ def test_process_message_fetch_error(db, gmail_integration, sample_contact):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.side_effect = Exception(
-        "Fetch failed"
-    )
+    mock_service.users().messages().get().execute.side_effect = Exception("Fetch failed")
 
     result = _process_message(db, mock_service, "err_msg", gmail_integration)
     assert result is False
 
 
 def test_process_message_skips_non_inbox_sent(
-    db, gmail_integration, sample_contact,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(labels=["SPAM"])
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        labels=["SPAM"]
     )
 
     result = _process_message(db, mock_service, "spam_msg", gmail_integration)
@@ -904,28 +918,24 @@ def test_process_message_no_matching_contact(db, gmail_integration):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(
-            from_addr="stranger@other.com",
-            to_addr="admin@gmail.com",
-        )
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        from_addr="stranger@other.com",
+        to_addr="admin@gmail.com",
     )
 
-    result = _process_message(
-        db, mock_service, "no_contact_msg", gmail_integration
-    )
+    result = _process_message(db, mock_service, "no_contact_msg", gmail_integration)
     assert result is False
 
 
 def test_process_message_updates_last_contacted(
-    db, gmail_integration, sample_contact,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import _process_message
 
     mock_service = MagicMock()
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message()
-    )
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message()
 
     _process_message(db, mock_service, "lca_msg", gmail_integration)
 
@@ -941,7 +951,11 @@ def test_process_message_updates_last_contacted(
 @patch("app.services.gmail_service._renew_watch_if_needed")
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_history_update_success(
-    mock_build, mock_renew, db, gmail_integration, sample_contact,
+    mock_build,
+    mock_renew,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import process_history_update
 
@@ -957,8 +971,8 @@ def test_process_history_update_success(
             }
         ]
     }
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(msg_id="hist_msg_1")
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        msg_id="hist_msg_1"
     )
 
     count = process_history_update(db, gmail_integration, "99999")
@@ -990,15 +1004,15 @@ def test_process_history_update_no_history_id(db, admin_user):
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_history_update_api_error(
-    mock_build, db, gmail_integration,
+    mock_build,
+    db,
+    gmail_integration,
 ):
     from app.services.gmail_service import process_history_update
 
     mock_service = MagicMock()
     mock_build.return_value = mock_service
-    mock_service.users().history().list().execute.side_effect = Exception(
-        "History error"
-    )
+    mock_service.users().history().list().execute.side_effect = Exception("History error")
 
     count = process_history_update(db, gmail_integration, "99999")
     assert count == 0
@@ -1010,7 +1024,11 @@ def test_process_history_update_api_error(
 @patch("app.services.gmail_service._renew_watch_if_needed")
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_history_update_deduplicates(
-    mock_build, mock_renew, db, gmail_integration, sample_contact,
+    mock_build,
+    mock_renew,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import process_history_update
 
@@ -1024,8 +1042,8 @@ def test_process_history_update_deduplicates(
             {"messagesAdded": [{"message": {"id": "dup_hist"}}]},
         ]
     }
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(msg_id="dup_hist")
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        msg_id="dup_hist"
     )
 
     count = process_history_update(db, gmail_integration, "99999")
@@ -1035,7 +1053,10 @@ def test_process_history_update_deduplicates(
 @patch("app.services.gmail_service._renew_watch_if_needed")
 @patch("app.services.gmail_service._build_gmail_service")
 def test_process_history_update_empty(
-    mock_build, mock_renew, db, gmail_integration,
+    mock_build,
+    mock_renew,
+    db,
+    gmail_integration,
 ):
     from app.services.gmail_service import process_history_update
 
@@ -1052,7 +1073,10 @@ def test_process_history_update_empty(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_initial_sync_success(
-    mock_build, db, gmail_integration, sample_contact,
+    mock_build,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import initial_sync
 
@@ -1062,8 +1086,8 @@ def test_initial_sync_success(
     mock_service.users().messages().list().execute.return_value = {
         "messages": [{"id": "init_msg_1"}]
     }
-    mock_service.users().messages().get().execute.return_value = (
-        _make_gmail_message(msg_id="init_msg_1")
+    mock_service.users().messages().get().execute.return_value = _make_gmail_message(
+        msg_id="init_msg_1"
     )
 
     count = initial_sync(db, gmail_integration)
@@ -1083,7 +1107,10 @@ def test_initial_sync_no_contacts(mock_build, db, gmail_integration):
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_initial_sync_no_messages(
-    mock_build, db, gmail_integration, sample_contact,
+    mock_build,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import initial_sync
 
@@ -1097,15 +1124,16 @@ def test_initial_sync_no_messages(
 
 @patch("app.services.gmail_service._build_gmail_service")
 def test_initial_sync_list_error(
-    mock_build, db, gmail_integration, sample_contact,
+    mock_build,
+    db,
+    gmail_integration,
+    sample_contact,
 ):
     from app.services.gmail_service import initial_sync
 
     mock_service = MagicMock()
     mock_build.return_value = mock_service
-    mock_service.users().messages().list().execute.side_effect = Exception(
-        "List failed"
-    )
+    mock_service.users().messages().list().execute.side_effect = Exception("List failed")
 
     count = initial_sync(db, gmail_integration)
     assert count == 0
@@ -1123,9 +1151,7 @@ def test_start_watch_success(mock_build, db, gmail_integration):
     mock_build.return_value = mock_service
     mock_service.users().watch().execute.return_value = {
         "historyId": "55555",
-        "expiration": str(
-            int((datetime.now(timezone.utc) + timedelta(days=7)).timestamp() * 1000)
-        ),
+        "expiration": str(int((datetime.now(timezone.utc) + timedelta(days=7)).timestamp() * 1000)),
     }
 
     start_watch(gmail_integration)
@@ -1165,9 +1191,7 @@ def test_stop_watch_error_non_fatal(mock_build, gmail_integration):
 def test_renew_watch_if_needed_expires_soon(mock_start, gmail_integration):
     from app.services.gmail_service import _renew_watch_if_needed
 
-    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(
-        hours=12
-    )
+    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(hours=12)
     _renew_watch_if_needed(gmail_integration)
     mock_start.assert_called_once_with(gmail_integration)
 
@@ -1176,9 +1200,7 @@ def test_renew_watch_if_needed_expires_soon(mock_start, gmail_integration):
 def test_renew_watch_if_needed_not_expiring(mock_start, gmail_integration):
     from app.services.gmail_service import _renew_watch_if_needed
 
-    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(
-        days=5
-    )
+    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(days=5)
     _renew_watch_if_needed(gmail_integration)
     mock_start.assert_not_called()
 
@@ -1197,9 +1219,7 @@ def test_renew_watch_if_needed_no_expiry(gmail_integration):
 def test_renew_watch_if_needed_error_non_fatal(mock_start, gmail_integration):
     from app.services.gmail_service import _renew_watch_if_needed
 
-    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(
-        hours=6
-    )
+    gmail_integration.watch_expiry = datetime.now(timezone.utc) + timedelta(hours=6)
     _renew_watch_if_needed(gmail_integration)  # Should not raise
 
 
@@ -1360,9 +1380,7 @@ def test_get_gmail_address(mock_build):
     from app.services.gmail_service import get_gmail_address
 
     mock_service = MagicMock()
-    mock_service.userinfo().get().execute.return_value = {
-        "email": "test@gmail.com"
-    }
+    mock_service.userinfo().get().execute.return_value = {"email": "test@gmail.com"}
     mock_build.return_value = mock_service
 
     creds = MagicMock()
@@ -1423,9 +1441,7 @@ def test_build_gmail_service(mock_build, db, admin_user):
         mock_creds_cls.return_value = mock_creds
 
         result = _build_gmail_service(integration)
-        mock_build.assert_called_once_with(
-            "gmail", "v1", credentials=mock_creds
-        )
+        mock_build.assert_called_once_with("gmail", "v1", credentials=mock_creds)
         assert result is not None
 
 
@@ -1433,7 +1449,9 @@ def test_build_gmail_service(mock_build, db, admin_user):
 @patch("app.services.gmail_service.GOOGLE_CLIENT_ID", "test-id")
 @patch("app.services.gmail_service.GOOGLE_CLIENT_SECRET", "test-secret")
 def test_get_credentials_no_refresh_needed(
-    mock_google_request, db, admin_user,
+    mock_google_request,
+    db,
+    admin_user,
 ):
     from app.services.gmail_service import _get_credentials
 

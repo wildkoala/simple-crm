@@ -11,7 +11,9 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from sqlalchemy.orm import Session
 
+from app.encryption import decrypt_value, encrypt_value
 from app.models.models import Communication, Contact, GmailIntegration
+from app.sanitize import sanitize_html
 from app.utils import generate_id
 
 logger = logging.getLogger(__name__)
@@ -68,15 +70,15 @@ def exchange_code(code: str) -> dict:
 
 def _get_credentials(integration: GmailIntegration) -> Credentials:
     creds = Credentials(
-        token=integration.access_token,
-        refresh_token=integration.refresh_token,
+        token=decrypt_value(integration.access_token),
+        refresh_token=decrypt_value(integration.refresh_token),
         token_uri="https://oauth2.googleapis.com/token",
         client_id=GOOGLE_CLIENT_ID,
         client_secret=GOOGLE_CLIENT_SECRET,
     )
     if creds.expired and creds.refresh_token:
         creds.refresh(GoogleRequest())
-        integration.access_token = creds.token
+        integration.access_token = encrypt_value(creds.token)
         if creds.expiry:
             integration.token_expiry = creds.expiry.replace(tzinfo=timezone.utc)
     return creds
@@ -214,21 +216,12 @@ def _process_message(
     integration: GmailIntegration,
 ) -> bool:
     """Fetch and store a single Gmail message. Returns True if a new comm was created."""
-    existing = (
-        db.query(Communication)
-        .filter(Communication.gmail_message_id == msg_id)
-        .first()
-    )
+    existing = db.query(Communication).filter(Communication.gmail_message_id == msg_id).first()
     if existing:
         return False
 
     try:
-        msg = (
-            service.users()
-            .messages()
-            .get(userId="me", id=msg_id, format="full")
-            .execute()
-        )
+        msg = service.users().messages().get(userId="me", id=msg_id, format="full").execute()
     except Exception:
         logger.exception("Failed to fetch Gmail message %s", msg_id)
         return False
@@ -267,7 +260,7 @@ def _process_message(
         subject=subject,
         email_from=from_addr[:255],
         email_to=to_addr[:500],
-        body_html=html_body or None,
+        body_html=sanitize_html(html_body) or None,
         gmail_message_id=msg_id,
         gmail_thread_id=msg.get("threadId"),
         direction=direction,
@@ -339,11 +332,7 @@ def initial_sync(
     """One-time sync: search INBOX for emails matching any of the user's contacts."""
     service = _build_gmail_service(integration)
 
-    contacts = (
-        db.query(Contact)
-        .filter(Contact.assigned_user_id == integration.user_id)
-        .all()
-    )
+    contacts = db.query(Contact).filter(Contact.assigned_user_id == integration.user_id).all()
     if not contacts:
         return 0
 
@@ -358,9 +347,7 @@ def initial_sync(
                 .execute()
             )
         except Exception:
-            logger.exception(
-                "Failed to list messages for contact %s", contact.id
-            )
+            logger.exception("Failed to list messages for contact %s", contact.id)
             continue
 
         for msg_ref in results.get("messages", []):
@@ -398,8 +385,12 @@ def send_email(
             orig = (
                 service.users()
                 .messages()
-                .get(userId="me", id=reply_to_message_id, format="metadata",
-                     metadataHeaders=["Message-ID"])
+                .get(
+                    userId="me",
+                    id=reply_to_message_id,
+                    format="metadata",
+                    metadataHeaders=["Message-ID"],
+                )
                 .execute()
             )
             for header in orig.get("payload", {}).get("headers", []):

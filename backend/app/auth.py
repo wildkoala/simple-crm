@@ -4,9 +4,8 @@ import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
-
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
@@ -208,9 +207,7 @@ def verify_google_id_token(credential: str) -> dict:
             detail="Google authentication is not configured",
         )
     try:
-        id_info = google_id_token.verify_oauth2_token(
-            credential, GoogleRequest(), GOOGLE_CLIENT_ID
-        )
+        id_info = google_id_token.verify_oauth2_token(credential, GoogleRequest(), GOOGLE_CLIENT_ID)
         if not id_info.get("email_verified"):
             raise ValueError("Email not verified by Google")
         return id_info

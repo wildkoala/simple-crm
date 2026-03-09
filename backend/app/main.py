@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy import text
 
 from app.database import SessionLocal, engine
 from app.models.models import Base
@@ -137,5 +138,17 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint — verifies database connectivity."""
+    try:
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("Health check failed: database unreachable")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "detail": "database unreachable"},
+        )
     return {"status": "healthy"}

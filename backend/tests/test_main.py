@@ -15,7 +15,19 @@ def test_root(client):
 def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json()["status"] == "healthy"
+
+
+def test_health_check_db_failure(client):
+    """Health check returns 503 when the database is unreachable."""
+    with patch("app.main.SessionLocal") as mock_session_cls:
+        mock_session_cls.return_value.execute.side_effect = RuntimeError("connection refused")
+        mock_session_cls.return_value.close = MagicMock()
+        response = client.get("/health")
+    assert response.status_code == 503
+    data = response.json()
+    assert data["status"] == "unhealthy"
+    assert "database" in data["detail"]
 
 
 def test_favicon(client):
@@ -56,7 +68,7 @@ def test_lifespan_startup():
     ):
         mock_db = MagicMock()
         mock_session_cls.return_value = mock_db
-        asyncio.get_event_loop().run_until_complete(run_lifespan())
+        asyncio.run(run_lifespan())
         mock_create.assert_called_once()
         mock_seed.assert_called_once_with(mock_db)
         mock_db.close.assert_called_once()

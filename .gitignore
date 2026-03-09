@@ -29,6 +29,9 @@ backend/.coverage
 # Database files
 *.db
 
+# Backups
+backups/
+
 # mdbook build output
 docs/book
 

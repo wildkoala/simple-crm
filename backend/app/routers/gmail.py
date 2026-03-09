@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_active_user
 from app.database import get_db
+from app.encryption import encrypt_value
 from app.models.models import Contact, GmailIntegration, User
 from app.schemas.schemas import (
     Communication as CommunicationSchema,
@@ -45,9 +46,7 @@ def gmail_status(
 ):
     """Check if Gmail is connected for the current user."""
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == current_user.id)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == current_user.id).first()
     )
     if not integration:
         return GmailIntegrationStatus(connected=False)
@@ -110,22 +109,18 @@ def gmail_callback(
         )
 
     # Upsert the integration
-    integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == user_id)
-        .first()
-    )
+    integration = db.query(GmailIntegration).filter(GmailIntegration.user_id == user_id).first()
     if integration:
-        integration.access_token = tokens["access_token"]
-        integration.refresh_token = tokens["refresh_token"]
+        integration.access_token = encrypt_value(tokens["access_token"])
+        integration.refresh_token = encrypt_value(tokens["refresh_token"])
         integration.token_expiry = tokens.get("token_expiry")
         integration.gmail_address = gmail_address
     else:
         integration = GmailIntegration(
             id=generate_id(),
             user_id=user_id,
-            access_token=tokens["access_token"],
-            refresh_token=tokens["refresh_token"],
+            access_token=encrypt_value(tokens["access_token"]),
+            refresh_token=encrypt_value(tokens["refresh_token"]),
             token_expiry=tokens.get("token_expiry"),
             gmail_address=gmail_address,
         )
@@ -160,9 +155,7 @@ def gmail_disconnect(
 ):
     """Disconnect Gmail integration."""
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == current_user.id)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == current_user.id).first()
     )
     if not integration:
         raise HTTPException(
@@ -214,9 +207,7 @@ async def gmail_webhook(
         return {"status": "ignored", "reason": "missing fields"}
 
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.gmail_address == email_address)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.gmail_address == email_address).first()
     )
     if not integration:
         return {"status": "ignored", "reason": "unknown account"}
@@ -238,9 +229,7 @@ def gmail_send(
 ):
     """Send an email via Gmail."""
     integration = (
-        db.query(GmailIntegration)
-        .filter(GmailIntegration.user_id == current_user.id)
-        .first()
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == current_user.id).first()
     )
     if not integration:
         raise HTTPException(
