@@ -1,3 +1,7 @@
+# Authorization model: All authenticated users can read all accounts.
+# This is intentional — Pretorin CRM is a shared team workspace where every
+# user is created by an admin. Write operations (create/update/delete) are
+# restricted to the creator or an admin.
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

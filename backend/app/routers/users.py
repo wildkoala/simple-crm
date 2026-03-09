@@ -1,3 +1,7 @@
+# Authorization model: All authenticated users can list users (names, roles).
+# This is intentional — the user list is needed for contact/opportunity
+# assignment. User creation/mutation is admin-only. No sensitive fields
+# (password hashes, API keys) are exposed in the response schema.
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

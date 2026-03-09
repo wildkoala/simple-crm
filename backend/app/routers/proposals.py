@@ -1,3 +1,6 @@
+# Authorization model: All authenticated users can read all proposals.
+# This is intentional — team-wide visibility supports capture collaboration.
+# Write operations are restricted to the creator or an admin.
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

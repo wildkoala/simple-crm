@@ -116,7 +116,9 @@ def google_login(request: Request, google_auth: GoogleAuthRequest, db: Session =
 
 
 @router.post("/register", response_model=UserSchema)
+@limiter.limit("5/minute")
 def register(
+    request: Request,
     user_create: UserCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),

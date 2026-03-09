@@ -20,9 +20,10 @@ def test_health_check(client):
 
 def test_health_check_db_failure(client):
     """Health check returns 503 when the database is unreachable."""
-    with patch("app.main.SessionLocal") as mock_session_cls:
-        mock_session_cls.return_value.execute.side_effect = RuntimeError("connection refused")
-        mock_session_cls.return_value.close = MagicMock()
+    with patch(
+        "sqlalchemy.orm.session.Session.execute",
+        side_effect=RuntimeError("connection refused"),
+    ):
         response = client.get("/health")
     assert response.status_code == 503
     data = response.json()
@@ -93,23 +94,27 @@ def test_unhandled_exception_returns_json(admin_headers):
 
     from app.main import app
 
-    with TestClient(app, raise_server_exceptions=False) as c:
-        with patch("app.routers.contacts.generate_id", side_effect=RuntimeError("boom")):
-            response = c.post(
-                "/contacts",
-                headers=admin_headers,
-                json={
-                    "first_name": "Test",
-                    "last_name": "User",
-                    "email": "t@t.com",
-                    "phone": "",
-                    "organization": "",
-                    "contact_type": "individual",
-                    "status": "cold",
-                    "needs_follow_up": False,
-                    "notes": "",
-                },
-            )
+    with (
+        patch("app.main.Base.metadata.create_all"),
+        patch("app.main.seed_database"),
+        TestClient(app, raise_server_exceptions=False) as c,
+        patch("app.routers.contacts.generate_id", side_effect=RuntimeError("boom")),
+    ):
+        response = c.post(
+            "/contacts",
+            headers=admin_headers,
+            json={
+                "first_name": "Test",
+                "last_name": "User",
+                "email": "t@t.com",
+                "phone": "",
+                "organization": "",
+                "contact_type": "individual",
+                "status": "cold",
+                "needs_follow_up": False,
+                "notes": "",
+            },
+        )
     assert response.status_code == 500
     data = response.json()
     assert data["detail"] == "Internal server error"

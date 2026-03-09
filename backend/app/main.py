@@ -2,15 +2,19 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import text
+from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.database import SessionLocal, engine
+from app.database import SessionLocal, engine, get_db
+from app.logging_config import generate_request_id, request_id_ctx, setup_logging
 from app.models.models import Base
 from app.routers import (
     accounts,
@@ -34,16 +38,26 @@ from app.routers import (
 )
 from app.seed_data import seed_database
 
-# Configure structured logging
-logging.basicConfig(
-    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+# Configure structured JSON logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Attach a unique request ID to every request for log correlation."""
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        rid = request.headers.get("X-Request-ID") or generate_request_id()
+        token = request_id_ctx.set(rid)
+        try:
+            response: Response = await call_next(request)
+            response.headers["X-Request-ID"] = rid
+            return response
+        finally:
+            request_id_ctx.reset(token)
 
 
 @asynccontextmanager
@@ -70,6 +84,12 @@ app = FastAPI(
 
 app.state.limiter = limiter
 
+# Request ID middleware (outermost so all middleware/handlers have the ID)
+app.add_middleware(RequestIdMiddleware)
+
+# Prometheus metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -81,7 +101,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    """Catch-all handler so unhandled errors always return JSON (not plain text)."""
+    """Catch-all handler so unhandled errors always return JSON."""
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
@@ -137,14 +157,10 @@ def root():
 
 
 @app.get("/health")
-def health_check():
+def health_check(db: Session = Depends(get_db)):
     """Health check endpoint — verifies database connectivity."""
     try:
-        db = SessionLocal()
-        try:
-            db.execute(text("SELECT 1"))
-        finally:
-            db.close()
+        db.execute(text("SELECT 1"))
     except Exception:
         logger.exception("Health check failed: database unreachable")
         return JSONResponse(
