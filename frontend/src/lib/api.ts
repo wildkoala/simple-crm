@@ -50,12 +50,21 @@ async function fetchApi<T>(
         clearAuthToken();
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
-      let errorMessage = 'An error occurred';
+      let errorMessage = `Request failed (${response.status})`;
       try {
-        const error: ApiError = await response.json();
-        errorMessage = error.detail || errorMessage;
+        const text = await response.text();
+        try {
+          const error = JSON.parse(text);
+          if (typeof error.detail === 'string') {
+            errorMessage = error.detail;
+          } else if (Array.isArray(error.detail)) {
+            errorMessage = error.detail.map((e: { msg: string }) => e.msg).join(', ');
+          }
+        } catch {
+          if (text) errorMessage = text;
+        }
       } catch {
-        // Response body wasn't valid JSON
+        // Can't read response body
       }
       throw new Error(errorMessage);
     }

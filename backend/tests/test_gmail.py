@@ -123,8 +123,9 @@ def test_gmail_callback_success(
         f"/gmail/callback?code=auth_code_123&state={admin_user.id}",
         follow_redirects=False,
     )
-    assert resp.status_code == 307
+    assert resp.status_code == 302
     assert "gmail=connected" in resp.headers["location"]
+    assert "/settings" in resp.headers["location"]
 
     # Check integration was created
     integration = (
@@ -160,7 +161,7 @@ def test_gmail_callback_updates_existing(
         f"/gmail/callback?code=code&state={admin_user.id}",
         follow_redirects=False,
     )
-    assert resp.status_code == 307
+    assert resp.status_code == 302
 
     db.refresh(gmail_integration)
     assert gmail_integration.access_token == "updated_token"
@@ -187,7 +188,7 @@ def test_gmail_callback_watch_failure_non_fatal(
         f"/gmail/callback?code=c&state={admin_user.id}",
         follow_redirects=False,
     )
-    assert resp.status_code == 307
+    assert resp.status_code == 302
     mock_initial_sync.assert_called_once()
 
 
@@ -213,7 +214,7 @@ def test_gmail_callback_initial_sync_failure_non_fatal(
             f"/gmail/callback?code=c&state={admin_user.id}",
             follow_redirects=False,
         )
-    assert resp.status_code == 307
+    assert resp.status_code == 302
 
 
 def test_gmail_callback_invalid_state(client):
@@ -221,7 +222,9 @@ def test_gmail_callback_invalid_state(client):
         "/gmail/callback?code=code&state=nonexistent_user_id",
         follow_redirects=False,
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 302
+    assert "gmail=error" in resp.headers["location"]
+    assert "reason=invalid_state" in resp.headers["location"]
 
 
 @patch("app.routers.gmail.exchange_code", side_effect=Exception("OAuth error"))
@@ -230,7 +233,9 @@ def test_gmail_callback_exchange_failure(mock_exchange, client, admin_user):
         f"/gmail/callback?code=bad_code&state={admin_user.id}",
         follow_redirects=False,
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 302
+    assert "gmail=error" in resp.headers["location"]
+    assert "reason=auth_failed" in resp.headers["location"]
 
 
 @patch("app.routers.gmail.exchange_code")
@@ -247,7 +252,9 @@ def test_gmail_callback_email_fetch_failure(
         f"/gmail/callback?code=code&state={admin_user.id}",
         follow_redirects=False,
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 302
+    assert "gmail=error" in resp.headers["location"]
+    assert "reason=email_lookup_failed" in resp.headers["location"]
 
 
 # --- Disconnect endpoint ---

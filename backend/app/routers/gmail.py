@@ -82,18 +82,18 @@ def gmail_callback(
     user_id = state
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid state parameter",
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/settings?gmail=error&reason=invalid_state",
+            status_code=302,
         )
 
     try:
         tokens = exchange_code(code)
     except Exception:
         logger.exception("Failed to exchange OAuth code")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to authenticate with Google",
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/settings?gmail=error&reason=auth_failed",
+            status_code=302,
         )
 
     # Get the Gmail address
@@ -104,9 +104,9 @@ def gmail_callback(
         gmail_address = get_gmail_address(creds)
     except Exception:
         logger.exception("Failed to get Gmail address")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to retrieve Gmail address",
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}/settings?gmail=error&reason=email_lookup_failed",
+            status_code=302,
         )
 
     # Upsert the integration
@@ -147,7 +147,10 @@ def gmail_callback(
     except Exception:
         logger.exception("Initial Gmail sync failed")
 
-    return RedirectResponse(url=f"{FRONTEND_URL}/contacts?gmail=connected")
+    return RedirectResponse(
+        url=f"{FRONTEND_URL}/settings?gmail=connected",
+        status_code=302,
+    )
 
 
 @router.delete("/disconnect", status_code=status.HTTP_204_NO_CONTENT)

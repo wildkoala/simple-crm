@@ -9,6 +9,29 @@ Only admin users can create and manage other user accounts.
 | **User** | Full CRUD on own resources. Read access to all shared data. |
 | **Admin** | Everything a user can do, plus: create/edit/delete users, restore deleted opportunities, access audit logs. |
 
+## Creating the First Admin User
+
+In production, the database is not seeded with a demo account. Use the built-in CLI command to create your first admin user:
+
+```bash
+cd backend
+python -m app.create_admin
+```
+
+You will be prompted for:
+
+- **Email** -- Must be unique.
+- **Full name** -- Display name for the account.
+- **Password** -- Minimum 8 characters (entered twice for confirmation).
+
+The command creates an active user with the **Admin** role. Once logged in, you can create additional users through the web UI.
+
+> **Note:** If you are running with Docker, execute the command inside the backend container:
+>
+> ```bash
+> docker compose exec backend python -m app.create_admin
+> ```
+
 ## Creating a User
 
 1. Log in as an admin.

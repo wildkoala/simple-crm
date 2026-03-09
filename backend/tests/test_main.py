@@ -75,6 +75,34 @@ def test_get_db_generator():
         pass
 
 
+def test_unhandled_exception_returns_json(admin_headers):
+    """Unhandled exceptions should return JSON, not plain text."""
+    from starlette.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app, raise_server_exceptions=False) as c:
+        with patch("app.routers.contacts.generate_id", side_effect=RuntimeError("boom")):
+            response = c.post(
+                "/contacts",
+                headers=admin_headers,
+                json={
+                    "first_name": "Test",
+                    "last_name": "User",
+                    "email": "t@t.com",
+                    "phone": "",
+                    "organization": "",
+                    "contact_type": "individual",
+                    "status": "cold",
+                    "needs_follow_up": False,
+                    "notes": "",
+                },
+            )
+    assert response.status_code == 500
+    data = response.json()
+    assert data["detail"] == "Internal server error"
+
+
 def test_extra_cors_origins():
     """Test that EXTRA_CORS_ORIGINS env var is processed."""
     import importlib

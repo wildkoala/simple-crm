@@ -78,6 +78,16 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     )
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler so unhandled errors always return JSON (not plain text)."""
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 # Disable favicon
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
