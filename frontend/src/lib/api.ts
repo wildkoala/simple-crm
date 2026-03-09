@@ -18,6 +18,39 @@ export function setAuthToken(token: string): void {
 
 export function clearAuthToken(): void {
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('refresh_token');
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem('refresh_token');
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem('refresh_token', token);
+}
+
+// Attempt to refresh the access token using the stored refresh token.
+// Returns true if the token was successfully refreshed.
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    setAuthToken(data.access_token);
+    if (data.refresh_token) setRefreshToken(data.refresh_token);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Generic fetch wrapper with auth
@@ -47,6 +80,17 @@ async function fetchApi<T>(
 
     if (!response.ok) {
       if (response.status === 401) {
+        // For non-auth endpoints, try refreshing the token first
+        if (!endpoint.startsWith('/auth/')) {
+          if (!_refreshPromise) {
+            _refreshPromise = tryRefreshToken().finally(() => { _refreshPromise = null; });
+          }
+          const refreshed = await _refreshPromise;
+          if (refreshed) {
+            clearTimeout(timeoutId);
+            return fetchApi<T>(endpoint, options);
+          }
+        }
         clearAuthToken();
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
@@ -88,6 +132,7 @@ export interface LoginCredentials {
 
 export interface AuthToken {
   access_token: string;
+  refresh_token?: string;
   token_type: string;
 }
 

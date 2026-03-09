@@ -2,6 +2,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -37,6 +38,16 @@ from app.routers import (
     vehicles,
 )
 from app.seed_data import seed_database
+
+# Initialize Sentry (no-op if DSN not configured)
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+if _sentry_dsn:  # pragma: no cover
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+        environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+    )
 
 # Configure structured JSON logging
 setup_logging()

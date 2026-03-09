@@ -1472,3 +1472,38 @@ def test_get_credentials_no_refresh_needed(
 
         _get_credentials(integration)
         mock_creds.refresh.assert_not_called()
+
+
+# --- Webhook authentication tests ---
+
+
+@patch("app.routers.gmail.GMAIL_WEBHOOK_TOKEN", "secret123")
+@patch("app.routers.gmail.process_history_update", return_value=1)
+def test_gmail_webhook_auth_valid_token(mock_process, client, gmail_integration):
+    """Webhook succeeds with correct Bearer token when GMAIL_WEBHOOK_TOKEN is set."""
+    body = _make_webhook_body("admin@gmail.com", "99999")
+    resp = client.post(
+        "/gmail/webhook", json=body, headers={"Authorization": "Bearer secret123"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+@patch("app.routers.gmail.GMAIL_WEBHOOK_TOKEN", "secret123")
+def test_gmail_webhook_auth_missing_token(client):
+    """Webhook rejects request without Authorization header."""
+    body = _make_webhook_body("admin@gmail.com", "99999")
+    resp = client.post("/gmail/webhook", json=body)
+    assert resp.status_code == 403
+    assert "Missing webhook token" in resp.json()["detail"]
+
+
+@patch("app.routers.gmail.GMAIL_WEBHOOK_TOKEN", "secret123")
+def test_gmail_webhook_auth_wrong_token(client):
+    """Webhook rejects request with wrong Bearer token."""
+    body = _make_webhook_body("admin@gmail.com", "99999")
+    resp = client.post(
+        "/gmail/webhook", json=body, headers={"Authorization": "Bearer wrongtoken"}
+    )
+    assert resp.status_code == 403
+    assert "Invalid webhook token" in resp.json()["detail"]

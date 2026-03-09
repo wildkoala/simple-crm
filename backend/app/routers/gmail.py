@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/gmail", tags=["gmail"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+GMAIL_WEBHOOK_TOKEN = os.getenv("GMAIL_WEBHOOK_TOKEN", "")
 
 
 @router.get("/status", response_model=GmailIntegrationStatus)
@@ -72,7 +74,7 @@ def gmail_auth_url(
 
 
 @router.get("/callback")
-def gmail_callback(
+async def gmail_callback(
     code: str = Query(...),
     state: str = Query(...),
     db: Session = Depends(get_db),
@@ -87,7 +89,7 @@ def gmail_callback(
         )
 
     try:
-        tokens = exchange_code(code)
+        tokens = await asyncio.to_thread(exchange_code, code)
     except Exception:
         logger.exception("Failed to exchange OAuth code")
         return RedirectResponse(
@@ -100,7 +102,7 @@ def gmail_callback(
 
     creds = Credentials(token=tokens["access_token"])
     try:
-        gmail_address = get_gmail_address(creds)
+        gmail_address = await asyncio.to_thread(get_gmail_address, creds)
     except Exception:
         logger.exception("Failed to get Gmail address")
         return RedirectResponse(
@@ -131,14 +133,14 @@ def gmail_callback(
 
     # Start Pub/Sub watch on INBOX
     try:
-        start_watch(integration)
+        await asyncio.to_thread(start_watch, integration)
         db.commit()
     except Exception:
         logger.warning("Could not start Gmail watch (GOOGLE_PUBSUB_TOPIC may not be set)")
 
     # Run initial sync of existing emails across all contacts
     try:
-        initial_sync(db, integration)
+        await asyncio.to_thread(initial_sync, db, integration)
     except Exception:
         logger.exception("Initial Gmail sync failed")
 
@@ -149,7 +151,7 @@ def gmail_callback(
 
 
 @router.delete("/disconnect", status_code=status.HTTP_204_NO_CONTENT)
-def gmail_disconnect(
+async def gmail_disconnect(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -163,7 +165,7 @@ def gmail_disconnect(
             detail="Gmail not connected",
         )
 
-    stop_watch(integration)
+    await asyncio.to_thread(stop_watch, integration)
     db.delete(integration)
     db.commit()
     return None
@@ -184,7 +186,22 @@ async def gmail_webhook(
       },
       ...
     }
+
+    Set GMAIL_WEBHOOK_TOKEN to require a Bearer token for verification.
     """
+    # Verify webhook authenticity if a shared secret is configured
+    if GMAIL_WEBHOOK_TOKEN:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Missing webhook token"
+            )
+        token = auth_header.removeprefix("Bearer ").strip()
+        if token != GMAIL_WEBHOOK_TOKEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid webhook token"
+            )
+
     try:
         body = await request.json()
     except Exception:
@@ -222,7 +239,7 @@ async def gmail_webhook(
 
 
 @router.post("/send", response_model=CommunicationSchema, status_code=status.HTTP_201_CREATED)
-def gmail_send(
+async def gmail_send(
     request: GmailSendRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -252,7 +269,8 @@ def gmail_send(
         )
 
     try:
-        comm = send_email(
+        comm = await asyncio.to_thread(
+            send_email,
             db=db,
             integration=integration,
             contact=contact,

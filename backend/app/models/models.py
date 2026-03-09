@@ -1,6 +1,17 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -24,6 +35,13 @@ opportunity_vehicles = Table(
 
 class Account(Base):
     __tablename__ = "accounts"
+    __table_args__ = (
+        CheckConstraint(
+            "account_type IN ("
+            "'government_agency','prime_contractor','subcontractor','partner','vendor')",
+            name="ck_accounts_account_type",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     name = Column(String(300), nullable=False)
@@ -51,6 +69,16 @@ class Account(Base):
 
 class Contact(Base):
     __tablename__ = "contacts"
+    __table_args__ = (
+        CheckConstraint(
+            "contact_type IN ('individual','commercial','government')",
+            name="ck_contacts_contact_type",
+        ),
+        CheckConstraint(
+            "status IN ('cold','warm','hot')",
+            name="ck_contacts_status",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     first_name = Column(String(100), nullable=False)
@@ -88,6 +116,16 @@ class Contact(Base):
 
 class Communication(Base):
     __tablename__ = "communications"
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('email','phone','meeting','other')",
+            name="ck_communications_type",
+        ),
+        CheckConstraint(
+            "direction IN ('inbound','outbound') OR direction IS NULL",
+            name="ck_communications_direction",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=False, index=True)
@@ -139,6 +177,12 @@ class GmailIntegration(Base):
 
 class Contract(Base):
     __tablename__ = "contracts"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('prospective','in progress','submitted','not a good fit')",
+            name="ck_contracts_status",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     title = Column(String(300), nullable=False)
@@ -157,7 +201,7 @@ class Contract(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
-    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
 
     # Relationships
     assigned_contacts = relationship(
@@ -172,6 +216,13 @@ class Contract(Base):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("role IN ('admin','user')", name="ck_users_role"),
+        CheckConstraint(
+            "auth_provider IN ('local','google') OR auth_provider IS NULL",
+            name="ck_users_auth_provider",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
@@ -212,6 +263,26 @@ class User(Base):
 
 class Opportunity(Base):
     __tablename__ = "opportunities"
+    __table_args__ = (
+        CheckConstraint(
+            "set_aside_type IN ("
+            "'small_business','8a','hubzone','wosb','sdvosb','full_and_open','none'"
+            ") OR set_aside_type IS NULL",
+            name="ck_opportunities_set_aside_type",
+        ),
+        CheckConstraint(
+            "source IN ("
+            "'sam_gov','agency_forecast','incumbent_recompete','partner_referral','internal'"
+            ") OR source IS NULL",
+            name="ck_opportunities_source",
+        ),
+        CheckConstraint(
+            "stage IN ("
+            "'identified','qualified','capture','teaming','proposal','submitted','awarded','lost'"
+            ")",
+            name="ck_opportunities_stage",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     title = Column(String(300), nullable=False)
@@ -284,6 +355,12 @@ class Opportunity(Base):
 
 class ContractVehicle(Base):
     __tablename__ = "contract_vehicles"
+    __table_args__ = (
+        CheckConstraint(
+            "prime_or_sub IN ('prime','sub') OR prime_or_sub IS NULL",
+            name="ck_contract_vehicles_prime_or_sub",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     name = Column(String(300), nullable=False)
@@ -310,6 +387,16 @@ class ContractVehicle(Base):
 
 class Teaming(Base):
     __tablename__ = "teaming"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('prime','subcontractor','jv_partner')",
+            name="ck_teaming_role",
+        ),
+        CheckConstraint(
+            "status IN ('potential','nda_signed','teaming_agreed','active','inactive')",
+            name="ck_teaming_status",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     opportunity_id = Column(String(36), ForeignKey("opportunities.id"), nullable=False, index=True)
@@ -333,6 +420,16 @@ class Teaming(Base):
 
 class Proposal(Base):
     __tablename__ = "proposals"
+    __table_args__ = (
+        CheckConstraint(
+            "submission_type IN ('full','partial','draft') OR submission_type IS NULL",
+            name="ck_proposals_submission_type",
+        ),
+        CheckConstraint(
+            "status IN ('not_started','in_progress','review','final','submitted')",
+            name="ck_proposals_status",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     opportunity_id = Column(
@@ -361,6 +458,14 @@ class Proposal(Base):
 
 class OpportunityEvent(Base):
     __tablename__ = "opportunity_events"
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ("
+            "'discovery','contact','rfp_release','proposal_submitted',"
+            "'meeting','stage_change','note','other')",
+            name="ck_opportunity_events_event_type",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     opportunity_id = Column(
@@ -381,6 +486,12 @@ class OpportunityEvent(Base):
 
 class CaptureNote(Base):
     __tablename__ = "capture_notes"
+    __table_args__ = (
+        CheckConstraint(
+            "section IN ('customer_intel','incumbent','competitors','partners','risks','strategy')",
+            name="ck_capture_notes_section",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     opportunity_id = Column(
@@ -421,6 +532,12 @@ class Attachment(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('create','update','delete','restore')",
+            name="ck_audit_log_action",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
@@ -436,6 +553,16 @@ class AuditLog(Base):
 
 class Compliance(Base):
     __tablename__ = "compliance"
+    __table_args__ = (
+        CheckConstraint(
+            "certification_type IN ('small_business','8a','hubzone','wosb','sdvosb','edwosb')",
+            name="ck_compliance_certification_type",
+        ),
+        CheckConstraint(
+            "status IN ('active','expiring_soon','expired','pending')",
+            name="ck_compliance_status",
+        ),
+    )
 
     id = Column(String(36), primary_key=True, index=True)
     certification_type = Column(
