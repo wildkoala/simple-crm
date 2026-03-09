@@ -22,6 +22,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/contacts.readonly",
 ]
 
 # These must be set as environment variables
@@ -428,3 +429,80 @@ def send_email(
     db.commit()
     db.refresh(comm)
     return comm
+
+
+def fetch_google_contacts(
+    integration: GmailIntegration,
+    max_results: int = 1000,
+) -> list[dict]:
+    """Fetch contacts from Google People API. Returns list of parsed contact dicts."""
+    creds = _get_credentials(integration)
+    service = build("people", "v1", credentials=creds)
+
+    contacts: list[dict] = []
+    page_token = None
+
+    while True:
+        kwargs: dict = {
+            "resourceName": "people/me",
+            "pageSize": min(max_results - len(contacts), 1000),
+            "personFields": "names,emailAddresses,phoneNumbers,organizations",
+        }
+        if page_token:
+            kwargs["pageToken"] = page_token
+
+        results = service.people().connections().list(**kwargs).execute()
+
+        for person in results.get("connections", []):
+            names = person.get("names", [])
+            emails = person.get("emailAddresses", [])
+
+            if not names or not emails:
+                continue
+
+            name = names[0]
+            first_name = name.get("givenName", "").strip()
+            last_name = name.get("familyName", "").strip()
+
+            if not first_name and not last_name:
+                display = name.get("displayName", "").strip()
+                if not display:
+                    continue
+                parts = display.split(" ", 1)
+                first_name = parts[0]
+                last_name = parts[1] if len(parts) > 1 else ""
+
+            email = emails[0].get("value", "").strip()
+            if not email:
+                continue
+
+            phones = person.get("phoneNumbers", [])
+            phone = phones[0].get("value", "").strip() if phones else ""
+
+            orgs = person.get("organizations", [])
+            organization = ""
+            title = ""
+            if orgs:
+                organization = orgs[0].get("name", "").strip()
+                title = orgs[0].get("title", "").strip()
+
+            contacts.append(
+                {
+                    "google_resource_name": person.get("resourceName", ""),
+                    "first_name": first_name[:100],
+                    "last_name": last_name[:100],
+                    "email": email[:255],
+                    "phone": phone[:50],
+                    "organization": organization[:200],
+                    "title": title[:200],
+                }
+            )
+
+            if len(contacts) >= max_results:
+                break
+
+        page_token = results.get("nextPageToken")
+        if not page_token or len(contacts) >= max_results:
+            break
+
+    return contacts

@@ -166,6 +166,43 @@ class GmailSendRequest(BaseModel):
     thread_id: Optional[str] = None
 
 
+class GoogleContactPreview(BaseModel):
+    google_resource_name: str
+    first_name: str
+    last_name: str
+    email: str
+    phone: str = ""
+    organization: str = ""
+    title: str = ""
+    already_exists: bool = False
+
+
+class GoogleContactsPreviewResponse(BaseModel):
+    contacts: List[GoogleContactPreview]
+    total_fetched: int
+
+
+class GoogleContactImportItem(BaseModel):
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(max_length=100)
+    email: EmailStr
+    phone: str = Field(default="", max_length=50)
+    organization: str = Field(default="", max_length=200)
+    title: str = Field(default="", max_length=200)
+    contact_type: Literal["individual", "commercial", "government"] = "individual"
+    status: Literal["cold", "warm", "hot"] = "cold"
+
+
+class GoogleContactImportRequest(BaseModel):
+    contacts: List[GoogleContactImportItem] = Field(min_length=1, max_length=500)
+
+
+class GoogleContactImportResponse(BaseModel):
+    imported: int
+    skipped: int
+    errors: List[str] = []
+
+
 # Contract schemas
 class ContractBase(BaseModel):
     title: str = Field(min_length=1, max_length=300)

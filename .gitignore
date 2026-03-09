@@ -45,3 +45,4 @@ docs/book
 *.njsproj
 *.sln
 *.sw?
+.claude/

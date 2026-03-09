@@ -30,6 +30,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: "60"
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ENV: ${ENV:-development}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

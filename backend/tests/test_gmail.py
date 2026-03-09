@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.models.models import Communication, Contact, GmailIntegration
+from app.services.gmail_service import fetch_google_contacts
 from app.utils import generate_id
 
 
@@ -1503,3 +1504,555 @@ def test_gmail_webhook_auth_wrong_token(client):
     resp = client.post("/gmail/webhook", json=body, headers={"Authorization": "Bearer wrongtoken"})
     assert resp.status_code == 403
     assert "Invalid webhook token" in resp.json()["detail"]
+
+
+# --- Google Contacts import: service function ---
+
+
+def _make_people_api_response(connections, next_page_token=None):
+    """Helper to build a mock People API connections.list response."""
+    resp = {"connections": connections}
+    if next_page_token:
+        resp["nextPageToken"] = next_page_token
+    return resp
+
+
+def _make_person(
+    resource_name="people/1",
+    given_name="Alice",
+    family_name="Smith",
+    email="alice@example.com",
+    phone="555-0001",
+    org_name="Acme Inc",
+    org_title="Engineer",
+):
+    person = {"resourceName": resource_name}
+    if given_name or family_name:
+        person["names"] = [{"givenName": given_name, "familyName": family_name}]
+    if email:
+        person["emailAddresses"] = [{"value": email}]
+    if phone:
+        person["phoneNumbers"] = [{"value": phone}]
+    if org_name or org_title:
+        person["organizations"] = [{"name": org_name or "", "title": org_title or ""}]
+    return person
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_basic(mock_build, mock_get_creds, gmail_integration):
+    """Fetches contacts from Google People API."""
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [
+            _make_person("people/1", "Alice", "Smith", "alice@ex.com", "555-1", "Acme", "Dev"),
+            _make_person("people/2", "Bob", "Jones", "bob@ex.com", "555-2", "Corp", ""),
+        ]
+    )
+
+    result = fetch_google_contacts(gmail_integration, max_results=100)
+    assert len(result) == 2
+    assert result[0]["first_name"] == "Alice"
+    assert result[0]["last_name"] == "Smith"
+    assert result[0]["email"] == "alice@ex.com"
+    assert result[0]["phone"] == "555-1"
+    assert result[0]["organization"] == "Acme"
+    assert result[0]["title"] == "Dev"
+    assert result[0]["google_resource_name"] == "people/1"
+    assert result[1]["first_name"] == "Bob"
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_skips_no_name(mock_build, mock_get_creds, gmail_integration):
+    """Skips contacts without a name."""
+    person_no_name = {"resourceName": "people/x", "emailAddresses": [{"value": "a@b.com"}]}
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person_no_name, _make_person()]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 1
+    assert result[0]["first_name"] == "Alice"
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_skips_no_email(mock_build, mock_get_creds, gmail_integration):
+    """Skips contacts without an email."""
+    person_no_email = {
+        "resourceName": "people/x",
+        "names": [{"givenName": "No", "familyName": "Email"}],
+    }
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person_no_email, _make_person()]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 1
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_display_name_fallback(mock_build, mock_get_creds, gmail_integration):
+    """Falls back to displayName when givenName/familyName are empty."""
+    person = {
+        "resourceName": "people/dn",
+        "names": [{"givenName": "", "familyName": "", "displayName": "Full Name"}],
+        "emailAddresses": [{"value": "dn@ex.com"}],
+    }
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 1
+    assert result[0]["first_name"] == "Full"
+    assert result[0]["last_name"] == "Name"
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_single_display_name(mock_build, mock_get_creds, gmail_integration):
+    """Single-word displayName puts it in first_name with empty last_name."""
+    person = {
+        "resourceName": "people/sdn",
+        "names": [{"givenName": "", "familyName": "", "displayName": "Mononym"}],
+        "emailAddresses": [{"value": "mono@ex.com"}],
+    }
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert result[0]["first_name"] == "Mononym"
+    assert result[0]["last_name"] == ""
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_no_org_no_phone(mock_build, mock_get_creds, gmail_integration):
+    """Handles contacts without org or phone."""
+    person = _make_person("people/bare", "Solo", "Person", "solo@ex.com", "", "", "")
+    person.pop("phoneNumbers", None)
+    person.pop("organizations", None)
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 1
+    assert result[0]["phone"] == ""
+    assert result[0]["organization"] == ""
+    assert result[0]["title"] == ""
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_max_results(mock_build, mock_get_creds, gmail_integration):
+    """Respects max_results limit."""
+    people = [_make_person(f"people/{i}", "P", f"{i}", f"p{i}@ex.com") for i in range(10)]
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        people
+    )
+
+    result = fetch_google_contacts(gmail_integration, max_results=3)
+    assert len(result) == 3
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_pagination(mock_build, mock_get_creds, gmail_integration):
+    """Handles pagination with nextPageToken."""
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.side_effect = [
+        _make_people_api_response(
+            [_make_person("people/1", "A", "A", "a@ex.com")], next_page_token="page2"
+        ),
+        _make_people_api_response([_make_person("people/2", "B", "B", "b@ex.com")]),
+    ]
+
+    result = fetch_google_contacts(gmail_integration, max_results=100)
+    assert len(result) == 2
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_empty(mock_build, mock_get_creds, gmail_integration):
+    """Returns empty list when no connections exist."""
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = {}
+
+    result = fetch_google_contacts(gmail_integration)
+    assert result == []
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_empty_display_name(mock_build, mock_get_creds, gmail_integration):
+    """Skips contacts with empty givenName, familyName, AND displayName."""
+    person = {
+        "resourceName": "people/empty",
+        "names": [{"givenName": "", "familyName": "", "displayName": ""}],
+        "emailAddresses": [{"value": "e@ex.com"}],
+    }
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 0
+
+
+@patch("app.services.gmail_service._get_credentials")
+@patch("app.services.gmail_service.build")
+def test_fetch_google_contacts_empty_email_value(mock_build, mock_get_creds, gmail_integration):
+    """Skips contacts with an emailAddresses entry that has an empty value."""
+    person = {
+        "resourceName": "people/noval",
+        "names": [{"givenName": "A", "familyName": "B"}],
+        "emailAddresses": [{"value": ""}],
+    }
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_service.people().connections().list().execute.return_value = _make_people_api_response(
+        [person]
+    )
+
+    result = fetch_google_contacts(gmail_integration)
+    assert len(result) == 0
+
+
+# --- Google Contacts import: preview endpoint ---
+
+
+@patch("app.routers.gmail.fetch_google_contacts")
+def test_contacts_preview_success(mock_fetch, client, admin_headers, gmail_integration):
+    """Returns Google Contacts preview with already_exists flags."""
+    mock_fetch.return_value = [
+        {
+            "google_resource_name": "people/1",
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "email": "alice@example.com",
+            "phone": "555-0001",
+            "organization": "Acme",
+            "title": "Dev",
+        },
+    ]
+
+    resp = client.get("/gmail/contacts/preview", headers=admin_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_fetched"] == 1
+    assert len(data["contacts"]) == 1
+    assert data["contacts"][0]["first_name"] == "Alice"
+    assert data["contacts"][0]["already_exists"] is False
+
+
+@patch("app.routers.gmail.fetch_google_contacts")
+def test_contacts_preview_marks_existing(
+    mock_fetch, client, admin_headers, gmail_integration, sample_contact
+):
+    """Contacts whose email already exists are flagged already_exists=True."""
+    mock_fetch.return_value = [
+        {
+            "google_resource_name": "people/1",
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",  # same as sample_contact
+            "phone": "555-0001",
+            "organization": "Acme",
+            "title": "",
+        },
+        {
+            "google_resource_name": "people/2",
+            "first_name": "New",
+            "last_name": "Person",
+            "email": "new@example.com",
+            "phone": "",
+            "organization": "",
+            "title": "",
+        },
+    ]
+
+    resp = client.get("/gmail/contacts/preview", headers=admin_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_fetched"] == 2
+    existing = [c for c in data["contacts"] if c["already_exists"]]
+    new_ones = [c for c in data["contacts"] if not c["already_exists"]]
+    assert len(existing) == 1
+    assert existing[0]["email"] == "john@example.com"
+    assert len(new_ones) == 1
+
+
+def test_contacts_preview_not_connected(client, admin_headers):
+    """Returns 400 if Gmail not connected."""
+    resp = client.get("/gmail/contacts/preview", headers=admin_headers)
+    assert resp.status_code == 400
+    assert "not connected" in resp.json()["detail"].lower()
+
+
+def test_contacts_preview_unauthenticated(client):
+    """Requires authentication."""
+    resp = client.get("/gmail/contacts/preview")
+    assert resp.status_code in (401, 403)
+
+
+@patch("app.routers.gmail.fetch_google_contacts", side_effect=Exception("API error"))
+def test_contacts_preview_api_failure(mock_fetch, client, admin_headers, gmail_integration):
+    """Returns 502 on Google API failure."""
+    resp = client.get("/gmail/contacts/preview", headers=admin_headers)
+    assert resp.status_code == 502
+
+
+# --- Google Contacts import: import endpoint ---
+
+
+def test_contacts_import_success(client, admin_headers, gmail_integration):
+    """Successfully imports new contacts."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "Alice",
+                "last_name": "Smith",
+                "email": "alice@newcontact.com",
+                "phone": "555-9999",
+                "organization": "Acme Inc",
+                "title": "Engineer",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+            {
+                "first_name": "Bob",
+                "last_name": "Jones",
+                "email": "bob@newcontact.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "commercial",
+                "status": "warm",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["imported"] == 2
+    assert data["skipped"] == 0
+    assert data["errors"] == []
+
+
+def test_contacts_import_skips_existing(
+    client, admin_headers, gmail_integration, sample_contact
+):
+    """Skips contacts that already exist (by email)."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",  # already exists
+                "phone": "555-1234",
+                "organization": "Test Corp",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+            {
+                "first_name": "New",
+                "last_name": "Person",
+                "email": "new@example.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["imported"] == 1
+    assert data["skipped"] == 1
+
+
+def test_contacts_import_skips_duplicates_in_batch(client, admin_headers, gmail_integration):
+    """Skips duplicate emails within the same import batch."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "Alice",
+                "last_name": "One",
+                "email": "alice@dup.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+            {
+                "first_name": "Alice",
+                "last_name": "Two",
+                "email": "alice@dup.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["imported"] == 1
+    assert data["skipped"] == 1
+
+
+def test_contacts_import_not_connected(client, admin_headers):
+    """Returns 400 if Gmail not connected."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "X",
+                "last_name": "Y",
+                "email": "x@y.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 400
+
+
+def test_contacts_import_unauthenticated(client):
+    """Requires authentication."""
+    resp = client.post("/gmail/contacts/import", json={"contacts": []})
+    assert resp.status_code in (401, 403, 422)
+
+
+def test_contacts_import_empty_list(client, admin_headers, gmail_integration):
+    """Rejects empty contacts list."""
+    resp = client.post("/gmail/contacts/import", json={"contacts": []}, headers=admin_headers)
+    assert resp.status_code == 422
+
+
+def test_contacts_import_validation_missing_name(client, admin_headers, gmail_integration):
+    """Rejects contacts without a first_name."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "",
+                "last_name": "X",
+                "email": "a@b.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 422
+
+
+def test_contacts_import_case_insensitive_email_check(
+    client, admin_headers, gmail_integration, sample_contact
+):
+    """Email existence check is case-insensitive."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "JOHN@EXAMPLE.COM",  # different case, same email
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["skipped"] == 1
+    assert data["imported"] == 0
+
+
+@patch("app.routers.gmail.generate_id", side_effect=RuntimeError("id gen failed"))
+def test_contacts_import_handles_creation_error(
+    mock_gen_id, client, admin_headers, gmail_integration
+):
+    """Records errors when individual contact creation fails."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "Err",
+                "last_name": "Contact",
+                "email": "err@example.com",
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["imported"] == 0
+    assert len(data["errors"]) == 1
+    assert "err@example.com" in data["errors"][0]
+
+
+def test_contacts_import_user_isolation(
+    client, user_headers, user_gmail_integration, sample_contact
+):
+    """Regular user can import contacts; existing contacts belong to admin so no conflict."""
+    payload = {
+        "contacts": [
+            {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",  # exists for admin, not for regular user
+                "phone": "",
+                "organization": "",
+                "title": "",
+                "contact_type": "individual",
+                "status": "cold",
+            },
+        ]
+    }
+    resp = client.post("/gmail/contacts/import", json=payload, headers=user_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["imported"] == 1
+    assert data["skipped"] == 0

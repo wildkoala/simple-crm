@@ -20,10 +20,15 @@ from app.schemas.schemas import (
     GmailAuthUrl,
     GmailIntegrationStatus,
     GmailSendRequest,
+    GoogleContactImportRequest,
+    GoogleContactImportResponse,
+    GoogleContactPreview,
+    GoogleContactsPreviewResponse,
 )
 from app.services import gmail_service
 from app.services.gmail_service import (
     exchange_code,
+    fetch_google_contacts,
     get_auth_url,
     get_gmail_address,
     initial_sync,
@@ -289,3 +294,123 @@ async def gmail_send(
         )
 
     return comm
+
+
+@router.get("/contacts/preview", response_model=GoogleContactsPreviewResponse)
+async def gmail_contacts_preview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Fetch Google Contacts for preview before import."""
+    integration = (
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == current_user.id).first()
+    )
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Gmail is not connected. Please connect Gmail first.",
+        )
+
+    try:
+        raw_contacts = await asyncio.to_thread(fetch_google_contacts, integration)
+        db.commit()  # persist any refreshed tokens
+    except Exception:
+        logger.exception("Failed to fetch Google Contacts")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to fetch contacts from Google. "
+            "You may need to reconnect Gmail to grant contacts permission.",
+        )
+
+    # Check which emails already exist in the user's contacts
+    existing_emails = {
+        row[0].lower()
+        for row in db.query(Contact.email).filter(
+            Contact.assigned_user_id == current_user.id
+        ).all()
+    }
+
+    previews = [
+        GoogleContactPreview(
+            google_resource_name=c["google_resource_name"],
+            first_name=c["first_name"],
+            last_name=c["last_name"],
+            email=c["email"],
+            phone=c["phone"],
+            organization=c["organization"],
+            title=c["title"],
+            already_exists=c["email"].lower() in existing_emails,
+        )
+        for c in raw_contacts
+    ]
+
+    return GoogleContactsPreviewResponse(
+        contacts=previews,
+        total_fetched=len(previews),
+    )
+
+
+@router.post(
+    "/contacts/import",
+    response_model=GoogleContactImportResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def gmail_contacts_import(
+    request: GoogleContactImportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Import selected Google Contacts into the CRM."""
+    integration = (
+        db.query(GmailIntegration).filter(GmailIntegration.user_id == current_user.id).first()
+    )
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Gmail is not connected",
+        )
+
+    existing_emails = {
+        row[0].lower()
+        for row in db.query(Contact.email).filter(
+            Contact.assigned_user_id == current_user.id
+        ).all()
+    }
+
+    imported = 0
+    skipped = 0
+    errors: list[str] = []
+
+    for item in request.contacts:
+        if item.email.lower() in existing_emails:
+            skipped += 1
+            continue
+
+        try:
+            contact = Contact(
+                id=generate_id(),
+                first_name=item.first_name,
+                last_name=item.last_name,
+                email=item.email,
+                phone=item.phone,
+                organization=item.organization,
+                title=item.title or None,
+                contact_type=item.contact_type,
+                status=item.status,
+                notes="",
+                assigned_user_id=current_user.id,
+            )
+            db.add(contact)
+            existing_emails.add(item.email.lower())
+            imported += 1
+        except Exception as e:
+            errors.append(f"Failed to import {item.email}: {str(e)}")
+
+    if imported > 0:
+        db.commit()
+
+    return GoogleContactImportResponse(
+        imported=imported,
+        skipped=skipped,
+        errors=errors,
+    )

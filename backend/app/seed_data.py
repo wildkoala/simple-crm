@@ -574,9 +574,14 @@ def get_seed_compliance():
 
 
 def seed_database(db):
-    """Seed the database with initial data (development only)"""
+    """Seed the database with initial data.
+
+    Runs automatically in development. In other environments, set
+    SEED_DEMO_DATA=true to opt in.
+    """
     env = os.getenv("ENV", "development")
-    if env != "development":
+    seed_flag = os.getenv("SEED_DEMO_DATA", "").lower() in ("true", "1", "yes")
+    if env != "development" and not seed_flag:
         logger.info("Skipping database seeding in %s environment", env)
         return
 

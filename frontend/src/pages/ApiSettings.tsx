@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +22,25 @@ export default function ApiSettings() {
   const [gmailStatus, setGmailStatus] = useState<GmailStatus | null>(null);
   const [isConnectingGmail, setIsConnectingGmail] = useState(false);
   const [showGmailDisconnectConfirm, setShowGmailDisconnectConfirm] = useState(false);
+  const [justConnectedGmail, setJustConnectedGmail] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     loadApiKeyStatus();
     loadGmailStatus();
+
+    if (searchParams.get('gmail') === 'connected') {
+      setJustConnectedGmail(true);
+      toast.success('Gmail connected successfully!');
+      searchParams.delete('gmail');
+      setSearchParams(searchParams, { replace: true });
+    } else if (searchParams.get('gmail') === 'error') {
+      const reason = searchParams.get('reason') || 'unknown';
+      toast.error(`Gmail connection failed: ${reason}`);
+      searchParams.delete('gmail');
+      searchParams.delete('reason');
+      setSearchParams(searchParams, { replace: true });
+    }
   }, []);
 
   const loadApiKeyStatus = async () => {
@@ -164,7 +180,7 @@ export default function ApiSettings() {
                     <>
                       <Badge variant="default" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
-                        Connected
+                        Connected {justConnectedGmail && '🎉'}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
                         {gmailStatus.gmail_address}

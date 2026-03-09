@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as api from '@/lib/api';
 import { getContactStatusBadge, getContactTypeBadge } from '@/lib/badges';
-import { Plus, Search, Mail, Phone, Loader2, Calendar } from 'lucide-react';
+import { ImportGmailContactsDialog } from '@/components/ImportGmailContactsDialog';
+import { Plus, Search, Mail, Phone, Loader2, Calendar, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ContactsList() {
@@ -16,9 +17,12 @@ export default function ContactsList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [contacts, setContacts] = useState<api.Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
     loadContacts();
+    api.getGmailStatus().then((s) => setGmailConnected(s.connected)).catch(() => {});
   }, []);
 
   const loadContacts = async () => {
@@ -72,12 +76,20 @@ export default function ContactsList() {
               Manage your contact relationships
             </p>
           </div>
-          <Button asChild>
-            <Link to="/contacts/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Contact
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            {gmailConnected && (
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Import from Gmail
+              </Button>
+            )}
+            <Button asChild>
+              <Link to="/contacts/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Contact
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Search and Filter */}
@@ -174,6 +186,12 @@ export default function ContactsList() {
           </Card>
         )}
       </div>
+
+      <ImportGmailContactsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={loadContacts}
+      />
     </Layout>
   );
 }

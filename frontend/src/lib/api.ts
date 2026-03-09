@@ -918,3 +918,48 @@ export async function sendGmailEmail(request: GmailSendRequest): Promise<Communi
     body: JSON.stringify(request),
   });
 }
+
+// Gmail Contacts Import API
+export interface GoogleContactPreview {
+  google_resource_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  organization: string;
+  title: string;
+  already_exists: boolean;
+}
+
+export interface GoogleContactsPreviewResponse {
+  contacts: GoogleContactPreview[];
+  total_fetched: number;
+}
+
+export interface GoogleContactImportItem {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  organization: string;
+  title: string;
+  contact_type: 'individual' | 'commercial' | 'government';
+  status: 'cold' | 'warm' | 'hot';
+}
+
+export interface GoogleContactImportResponse {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function getGmailContactsPreview(): Promise<GoogleContactsPreviewResponse> {
+  return fetchApi<GoogleContactsPreviewResponse>('/gmail/contacts/preview');
+}
+
+export async function importGmailContacts(contacts: GoogleContactImportItem[]): Promise<GoogleContactImportResponse> {
+  return fetchApi<GoogleContactImportResponse>('/gmail/contacts/import', {
+    method: 'POST',
+    body: JSON.stringify({ contacts }),
+  });
+}
