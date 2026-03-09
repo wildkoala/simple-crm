@@ -49,11 +49,12 @@ When adding a new data entity, follow this checklist:
 ### Backend
 
 1. **Model** -- Add SQLAlchemy model in `app/models/models.py`.
-2. **Schema** -- Add Pydantic schemas in `app/schemas/schemas.py` (Create, Update, Patch, Response).
-3. **Router** -- Create a new router in `app/routers/` with CRUD endpoints.
-4. **Register** -- Import and include the router in `app/main.py`.
-5. **Tests** -- Write tests covering all endpoints with 100% code coverage.
-6. **Auth** -- Apply appropriate auth dependencies (`get_current_active_user`, etc.).
+2. **Migration** -- Generate an Alembic migration: `alembic revision --autogenerate -m "add entity_name"`.
+3. **Schema** -- Add Pydantic schemas in `app/schemas/schemas.py` (Create, Update, Patch, Response).
+4. **Router** -- Create a new router in `app/routers/` with CRUD endpoints.
+5. **Register** -- Import and include the router in `app/main.py`.
+6. **Tests** -- Write tests covering all endpoints with 100% code coverage.
+7. **Auth** -- Apply appropriate auth dependencies (`get_current_active_user`, etc.).
 
 ### Frontend
 

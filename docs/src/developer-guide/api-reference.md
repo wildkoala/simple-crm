@@ -26,6 +26,7 @@ Authorization: Bearer <jwt_token_or_api_key>
 | GET | `/auth/me` | Get current user | JWT/API key |
 | POST | `/auth/password-reset-request` | Request password reset | None |
 | POST | `/auth/password-reset` | Reset password with token | None |
+| POST | `/auth/refresh` | Refresh access token | None (refresh token) |
 | POST | `/auth/password-change` | Change password | JWT |
 
 ### Users (`/users`)

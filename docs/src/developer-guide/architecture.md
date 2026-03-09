@@ -22,11 +22,12 @@ Pretorin CRM follows a standard three-tier architecture with a clear separation 
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | **Backend** | Python 3.12, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
 | **Database** | PostgreSQL 16 (production), SQLite (development) |
-| **Auth** | JWT (python-jose), bcrypt, Google OAuth2 ID tokens |
+| **Auth** | JWT (PyJWT), bcrypt, Google OAuth2 ID tokens |
 | **Email** | Google Gmail API, SMTP (password resets) |
+| **Monitoring** | Prometheus metrics, Sentry error reporting, structured JSON logging |
 | **Testing** | pytest (backend), Vitest + React Testing Library (frontend) |
 | **CI/CD** | GitHub Actions |
-| **Deployment** | Docker Compose |
+| **Deployment** | Docker Compose, Alembic database migrations |
 
 ## Directory Structure
 
@@ -38,12 +39,18 @@ simple-crm/
 │   │   ├── auth.py              # Authentication utilities
 │   │   ├── database.py          # SQLAlchemy engine & session
 │   │   ├── email.py             # SMTP email sending
+│   │   ├── encryption.py        # Fernet encryption for OAuth tokens
+│   │   ├── logging_config.py    # Structured JSON logging & request ID
+│   │   ├── sanitize.py          # HTML sanitization
 │   │   ├── utils.py             # UUID generation
 │   │   ├── seed_data.py         # Demo data seeder
+│   │   ├── create_admin.py      # CLI admin user creation
 │   │   ├── models/models.py     # SQLAlchemy models
 │   │   ├── schemas/schemas.py   # Pydantic request/response schemas
 │   │   ├── routers/             # API endpoint handlers
 │   │   └── services/            # Business logic (Gmail, SAM.gov, imports)
+│   ├── alembic/                 # Database migrations
+│   ├── entrypoint.sh            # Docker entrypoint (migrations + uvicorn)
 │   ├── tests/                   # pytest test suite
 │   ├── pyproject.toml           # Python project config
 │   └── Dockerfile
@@ -58,7 +65,7 @@ simple-crm/
 │   ├── package.json
 │   └── Dockerfile
 ├── docs/                        # This documentation (mdbook)
-├── scripts/                     # Development scripts
+├── scripts/                     # Development & ops scripts (backup, pre-commit)
 ├── docker-compose.yml
 └── .github/workflows/ci.yml     # CI pipeline
 ```

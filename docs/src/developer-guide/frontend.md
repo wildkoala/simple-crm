@@ -51,15 +51,17 @@ export async function getContacts(): Promise<Contact[]> {
 }
 ```
 
-Auth token is stored in `localStorage` under the key `auth_token`.
+Auth token is stored in `localStorage` under the key `auth_token`. The client includes automatic token refresh on 401 responses -- if a refresh token is available, it retries the failed request after obtaining a new access token. Concurrent 401s are deduplicated so only one refresh request is issued.
 
 ## Authentication Flow
 
 1. `AuthContext` checks `localStorage` for an existing token on mount.
 2. If found, calls `GET /auth/me` to validate and load user data.
-3. On login (email/password or Google), stores the JWT and loads user data.
-4. On 401 response from any API call, clears token and dispatches `auth:unauthorized` event.
-5. `AuthContext` listens for the event and redirects to login.
+3. On login (email/password or Google), stores the access token and refresh token, then loads user data.
+4. On 401 response, the API client attempts a token refresh using the stored refresh token.
+5. If refresh succeeds, the original request is retried with the new access token.
+6. If refresh fails or no refresh token exists, clears tokens and dispatches `auth:unauthorized` event.
+7. `AuthContext` listens for the event and redirects to login.
 
 ## UI Components
 
@@ -96,5 +98,6 @@ Frontend environment variables must be prefixed with `VITE_` for Vite to expose 
 |----------|-------------|
 | `VITE_API_BASE_URL` | Backend API URL (`/api` in Docker, `http://localhost:8000` for local dev) |
 | `VITE_GOOGLE_CLIENT_ID` | Google client ID for Sign-In button (auto-set from `GOOGLE_CLIENT_ID` in Docker) |
+| `VITE_SENTRY_DSN` | Sentry DSN for frontend error reporting (optional) |
 
 Set in `frontend/.env.local` for local development outside Docker. In Docker, `GOOGLE_CLIENT_ID` from the root `.env` is mapped to `VITE_GOOGLE_CLIENT_ID` automatically by the Dockerfile.

@@ -45,6 +45,12 @@ For real-time email sync via push notifications:
 GOOGLE_PUBSUB_TOPIC=projects/your-project/topics/gmail-push
 ```
 
+5. Set a shared webhook token for request verification:
+
+```
+GMAIL_WEBHOOK_TOKEN=your-shared-secret
+```
+
 Without Pub/Sub, email sync happens at connection time and when users interact with contacts.
 
 ## OAuth Scopes
@@ -68,7 +74,8 @@ Gmail integration is per-user. Each CRM user connects their own Gmail account in
 
 ## Security Considerations
 
-- OAuth refresh tokens are stored in the database. Ensure your database is encrypted at rest in production.
+- OAuth tokens (access and refresh) are encrypted at rest using Fernet symmetric encryption (`TOKEN_ENCRYPTION_KEY`).
+- A `TOKEN_ENCRYPTION_KEY` should be set in production (generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`).
 - Each user's Gmail access is independent -- one user cannot read another user's emails.
 - Disconnecting revokes the OAuth token with Google.
 - The CRM only accesses emails matching known contact email addresses during sync.

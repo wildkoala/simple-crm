@@ -16,15 +16,27 @@ Pretorin CRM supports three authentication methods: JWT tokens, API keys, and Go
 ```json
 {
   "sub": "user@example.com",
-  "exp": 1700000000
+  "exp": 1700000000,
+  "type": "access"
 }
 ```
 
-The `sub` claim is the user's email. On each request, the backend decodes the token, looks up the user by email, and checks `is_active`.
+The `sub` claim is the user's email. The `type` field distinguishes access tokens from refresh tokens. On each request, the backend decodes the token, looks up the user by email, and checks `is_active`.
 
 ### Token Expiration
 
-Default: 60 minutes (configurable via `ACCESS_TOKEN_EXPIRE_MINUTES`). After expiration, the client must re-authenticate.
+- **Access tokens**: 60 minutes (configurable via `ACCESS_TOKEN_EXPIRE_MINUTES`).
+- **Refresh tokens**: 7 days (configurable via `REFRESH_TOKEN_EXPIRE_DAYS`).
+
+### Token Refresh
+
+When an access token expires, the client can obtain a new one without re-authenticating:
+
+1. Client sends `POST /auth/refresh` with the refresh token.
+2. Backend verifies the token type is "refresh" and the token is valid.
+3. Returns a new access token and refresh token pair.
+
+The frontend API client handles this automatically -- on a 401 response, it attempts a refresh and retries the original request. The refresh endpoint is rate-limited to 30 requests/minute.
 
 ## API Key Authentication
 
@@ -95,7 +107,7 @@ def get_current_user_or_api_key(credentials = Depends(security)):
 
 ## Password Hashing
 
-- Algorithm: bcrypt via passlib.
+- Algorithm: bcrypt (direct `bcrypt.hashpw` / `bcrypt.checkpw`).
 - Minimum password length: 8 characters.
 - Password reset tokens: `secrets.token_urlsafe(32)`, hashed with HMAC-SHA256, 24-hour expiry.
 

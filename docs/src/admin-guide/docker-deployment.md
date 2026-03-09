@@ -38,9 +38,12 @@ The services start on:
 
 ### Backend
 
-- Built from `backend/Dockerfile` (Python 3.12-slim)
+- Built from `backend/Dockerfile` (Python 3.12-slim, non-root user)
+- Runs Alembic migrations automatically before starting uvicorn (via `entrypoint.sh`)
 - Depends on PostgreSQL (waits for health check)
-- Resource limits: 1 CPU, 1GB memory
+- Resource limits: 1 CPU, 1GB memory; reservations: 0.5 CPU, 512MB
+- Graceful shutdown: 30-second timeout for in-flight requests (`stop_grace_period: 35s`)
+- JSON logging driver with rotation (10MB max, 3 files)
 - Environment variables configured in `docker-compose.yml`
 
 ### Frontend
@@ -71,17 +74,32 @@ docker compose build
 docker compose up -d
 ```
 
-## Data Persistence
+## Data Persistence & Backups
 
-PostgreSQL data is stored in the `pgdata` Docker volume. To back up:
+PostgreSQL data is stored in the `pgdata` Docker volume.
+
+### Using the backup script (recommended)
 
 ```bash
-docker compose exec db pg_dump -U crm crm > backup.sql
+# Run a one-off backup
+./scripts/backup.sh
+
+# Install a nightly cron job (2 AM)
+./scripts/backup.sh --install-cron
+
+# Backup to a custom directory
+./scripts/backup.sh /path/to/backups
 ```
 
-To restore:
+Backups are compressed with gzip and old backups are pruned automatically (default: 30 days retention).
+
+### Manual backup/restore
 
 ```bash
+# Backup
+docker compose exec db pg_dump -U crm --clean --if-exists --no-owner crm > backup.sql
+
+# Restore
 docker compose exec -T db psql -U crm crm < backup.sql
 ```
 

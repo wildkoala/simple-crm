@@ -105,4 +105,9 @@ Set in `.env`:
 DATABASE_URL=postgresql://user:password@localhost:5432/crm
 ```
 
-Tables are created automatically on first startup.
+Tables are created via Alembic migrations. In Docker, migrations run automatically on container start. For local development:
+
+```bash
+cd backend
+alembic upgrade head
+```

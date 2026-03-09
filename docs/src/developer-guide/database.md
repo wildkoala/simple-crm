@@ -11,6 +11,7 @@ Pretorin CRM uses SQLAlchemy 2.0 with the declarative base pattern. All models a
 - Reads `DATABASE_URL` from environment.
 - Supports PostgreSQL (`postgresql://`) and SQLite (`sqlite:///`).
 - SQLite uses `check_same_thread=False` for multi-threaded access.
+- Connection pooling for PostgreSQL: `pool_size=10`, `max_overflow=20`, `pool_pre_ping=True`, `pool_recycle=3600`.
 - `SessionLocal` provides scoped database sessions.
 - `get_db()` dependency yields a session per request and closes it after.
 
@@ -117,8 +118,25 @@ Full capture pipeline entity with soft delete support.
 - **Timestamps** use `datetime.now(timezone.utc)` for UTC consistency.
 - **Soft deletes** use a nullable `deleted_at` column (currently only on Opportunity).
 - **Cascade deletes** are configured on relationships where child records should be removed with parents.
-- **Indexes** are added on frequently queried columns (email, status, stage, foreign keys).
+- **Indexes** are added on frequently queried columns (email, status, stage, deleted_at, foreign keys).
+- **CHECK constraints** enforce valid enum values at the database level (account_type, contact_type, status, stage, set_aside_type, etc.).
 
 ## Migrations
 
-The project currently uses `Base.metadata.create_all()` for table creation on startup. This creates new tables but does not alter existing ones. For schema changes to existing columns in production, manual SQL migrations or a migration tool (e.g., Alembic) would be needed.
+The project uses **Alembic** for database migrations. Migrations are stored in `backend/alembic/versions/` and run automatically before the application starts via `entrypoint.sh`:
+
+```bash
+alembic upgrade head
+```
+
+Current migrations:
+
+1. `c769fd9e5252_initial_schema.py` -- Full initial schema creation.
+2. `a2b3c4d5e6f7_add_index_and_check_constraints.py` -- Adds indexes and CHECK constraints.
+
+When adding new columns or modifying the schema, generate a new migration:
+
+```bash
+cd backend
+alembic revision --autogenerate -m "description of change"
+```

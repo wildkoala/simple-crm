@@ -16,7 +16,9 @@ All configuration is managed through environment variables, typically set in `ba
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ALGORITHM` | `HS256` | JWT signing algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT token lifetime in minutes |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Access token lifetime in minutes |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token lifetime in days |
+| `TOKEN_ENCRYPTION_KEY` | *(empty)* | Fernet key for encrypting OAuth tokens at rest (generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) |
 | `FRONTEND_URL` | `http://localhost:5173` | Frontend URL for CORS |
 | `EXTRA_CORS_ORIGINS` | *(empty)* | Comma-separated additional CORS origins |
 | `ENV` | `development` | Set to `production` to disable seed data |
@@ -30,6 +32,7 @@ All configuration is managed through environment variables, typically set in `ba
 | `GOOGLE_CLIENT_SECRET` | *(empty)* | Google OAuth2 client secret (for Gmail) |
 | `GOOGLE_REDIRECT_URI` | `http://localhost:8000/gmail/callback` | Gmail OAuth callback URL |
 | `GOOGLE_PUBSUB_TOPIC` | *(empty)* | Google Pub/Sub topic for Gmail push notifications |
+| `GMAIL_WEBHOOK_TOKEN` | *(empty)* | Shared secret for verifying Gmail webhook requests |
 
 See [Google Authentication Setup](./google-auth-setup.md) and [Gmail Integration Setup](./gmail-setup.md) for details.
 
@@ -46,13 +49,21 @@ See [Google Authentication Setup](./google-auth-setup.md) and [Gmail Integration
 
 When SMTP credentials are not configured, the system runs in development mode and prints password reset emails to the console.
 
+### Error Reporting (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SENTRY_DSN` | *(empty)* | Sentry DSN for backend error reporting |
+| `SENTRY_ENVIRONMENT` | `production` | Environment tag for Sentry events |
+
 ### Frontend
 
-The frontend uses a single environment variable:
+The frontend uses the following environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VITE_API_BASE_URL` | `/api` (Docker) | Backend API URL |
+| `VITE_SENTRY_DSN` | *(empty)* | Sentry DSN for frontend error reporting |
 
 `GOOGLE_CLIENT_ID` from the root `.env` is automatically passed to the frontend build via the Dockerfile. Set `VITE_API_BASE_URL` in `frontend/.env.local` only for local dev outside Docker.
 
@@ -67,3 +78,6 @@ The frontend uses a single environment variable:
 5. Configure SMTP for password reset emails.
 6. Use HTTPS in production -- update `GOOGLE_REDIRECT_URI` and `FRONTEND_URL` accordingly.
 7. Set appropriate `ACCESS_TOKEN_EXPIRE_MINUTES` for your security requirements.
+8. Generate a `TOKEN_ENCRYPTION_KEY` for Gmail OAuth token encryption at rest.
+9. Set up `SENTRY_DSN` for error reporting.
+10. Configure `scripts/backup.sh --install-cron` for scheduled database backups.

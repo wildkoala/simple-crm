@@ -6,10 +6,11 @@ The backend is a FastAPI application structured around routers, models, schemas,
 
 `backend/app/main.py` sets up the FastAPI application:
 
-- Configures CORS middleware.
+- Configures CORS middleware and request ID middleware.
 - Registers all routers.
-- Runs database table creation and seeding on startup (via lifespan).
-- Configures rate limiting and structured logging.
+- Seeds demo data on startup (schema managed by Alembic migrations via `entrypoint.sh`).
+- Configures rate limiting, structured JSON logging, Prometheus metrics, and Sentry error reporting.
+- Registers global exception handlers (rate limit, unhandled errors).
 
 Start with `python run.py` or `uvicorn app.main:app --reload`.
 
@@ -81,4 +82,20 @@ Pydantic v2 models in `app/schemas/schemas.py` handle request validation and res
 
 ## Rate Limiting
 
-Rate limiting uses `slowapi` with per-IP tracking. Applied to sensitive endpoints (login, password reset, Google auth).
+Rate limiting uses `slowapi` with per-IP tracking. Applied to sensitive endpoints:
+
+| Endpoint | Limit |
+|----------|-------|
+| `POST /auth/login` | 5/minute |
+| `POST /auth/google` | 10/minute |
+| `POST /auth/register` | 5/minute |
+| `POST /auth/refresh` | 30/minute |
+| `POST /auth/password-reset-request` | 3/minute |
+| `POST /auth/password-reset` | 5/minute |
+
+## Observability
+
+- **Structured Logging** -- JSON-formatted logs via `python-json-logger` with request ID context for correlation.
+- **Prometheus Metrics** -- Exposed at `/metrics` via `prometheus-fastapi-instrumentator`.
+- **Sentry** -- Optional error reporting when `SENTRY_DSN` is configured.
+- **Request ID** -- Every request gets a unique ID (from `X-Request-ID` header or auto-generated), returned in the response header and included in all log records.

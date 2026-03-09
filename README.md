@@ -24,6 +24,8 @@ Simple CRM is a straightforward customer relationship management system built sp
 - **Google Sign-In**: Optional Google identity provider login (see [Google Sign-In](#google-sign-in))
 - **SAM.gov Integration**: Import contract opportunities from SAM.gov via the govbizops scraper
 - **Gmail Integration**: Sync and send emails through the CRM per contact (see [Gmail Integration](#gmail-integration))
+- **Observability**: Structured JSON logging, Prometheus metrics, Sentry error reporting, request ID correlation
+- **Data Backups**: Scheduled PostgreSQL backups with retention management
 
 ## Technologies
 
@@ -37,9 +39,11 @@ Simple CRM is a straightforward customer relationship management system built sp
 **Backend:**
 - Python FastAPI framework
 - PostgreSQL database with SQLAlchemy ORM
-- JWT token authentication
+- Alembic database migrations
+- JWT token authentication with refresh tokens
 - API key authentication for automation
 - Pydantic for data validation
+- Prometheus metrics and Sentry error reporting
 
 ## Getting Started
 
@@ -72,6 +76,7 @@ Environment variables can be overridden in a `.env` file at the project root or 
 | Variable | Default | Description |
 |---|---|---|
 | `SECRET_KEY` | `change-me-in-production` | JWT signing key |
+| `TOKEN_ENCRYPTION_KEY` | *(empty)* | Fernet key for encrypting OAuth tokens at rest |
 | `ENV` | `development` | Set to `production` to disable seed data and debug features |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warning`, `error`) |
 | `VITE_API_BASE_URL` | `/api` (Docker) | Backend URL used by the frontend at build time |
@@ -79,6 +84,8 @@ Environment variables can be overridden in a `.env` file at the project root or 
 | `GOOGLE_CLIENT_SECRET` | *(empty)* | Google OAuth2 client secret |
 | `GOOGLE_REDIRECT_URI` | `{FRONTEND_URL}/api/gmail/callback` | OAuth2 callback URL (auto-derived if not set) |
 | `GOOGLE_PUBSUB_TOPIC` | *(empty)* | Pub/Sub topic for Gmail push notifications |
+| `GMAIL_WEBHOOK_TOKEN` | *(empty)* | Shared secret for verifying Gmail webhook requests |
+| `SENTRY_DSN` | *(empty)* | Sentry DSN for error reporting (optional) |
 
 Example production deployment:
 
@@ -171,6 +178,8 @@ Run these from the `frontend/` directory:
 - `npm run build:dev` - Build in development mode
 - `npm run lint` - Run ESLint
 - `npm run preview` - Preview production build locally
+- `npm test` - Run tests (Vitest)
+- `npm run test:watch` - Run tests in watch mode
 
 ### Backend Development
 
@@ -189,8 +198,12 @@ simple-crm/
 ├── docker-compose.yml        # Full-stack deployment
 ├── backend/
 │   ├── Dockerfile            # Backend container image
+│   ├── entrypoint.sh         # Docker entrypoint (migrations + uvicorn)
+│   ├── alembic/              # Database migrations
 │   ├── app/
 │   │   ├── auth.py           # Authentication logic
+│   │   ├── encryption.py     # Fernet encryption for OAuth tokens
+│   │   ├── logging_config.py # Structured JSON logging
 │   │   ├── models/           # Database models
 │   │   ├── routers/          # API route handlers
 │   │   ├── services/         # Shared business logic
@@ -208,6 +221,8 @@ simple-crm/
 │   ├── package.json          # Frontend dependencies
 │   └── vite.config.ts        # Vite configuration
 └── scripts/
+    ├── backup.sh             # Database backup with cron support
+    ├── pre-commit            # Pre-commit checks (lint, test, build)
     ├── dev.sh                # Development launcher (Linux/Mac)
     └── dev.bat               # Development launcher (Windows)
 ```
@@ -302,15 +317,19 @@ On any contact's detail page:
 - The Pub/Sub push subscription must point to your public `https://your-domain/gmail/webhook` endpoint
 - Gmail watches expire after 7 days; the system auto-renews watches when they are within 1 day of expiry
 - Submit your OAuth consent screen for Google verification if serving more than test users
-- Consider encrypting `access_token` and `refresh_token` columns at rest for additional security
+- OAuth tokens are encrypted at rest with Fernet encryption when `TOKEN_ENCRYPTION_KEY` is set
 
 ## Security Notes
 
 - API keys have limited access by design - they cannot modify or delete data beyond importing contracts
-- JWT tokens provide full access and should be kept secure
+- JWT tokens provide full access and should be kept secure; refresh tokens extend sessions without re-authentication
+- Gmail OAuth tokens are encrypted at rest via Fernet encryption (`TOKEN_ENCRYPTION_KEY`)
+- Rate limiting protects authentication endpoints (login, register, token refresh, password reset)
 - Change default passwords in production
 - Use environment variables for sensitive configuration
 - API keys should be rotated regularly
+- Database CHECK constraints enforce valid enum values at the SQL level
+- Structured JSON logging with request ID correlation enables tracing
 
 ## License
 

@@ -112,7 +112,11 @@ npm test -- --coverage
 Test files are co-located with source files using the `.test.ts` / `.test.tsx` suffix:
 
 - `src/components/ErrorBoundary.test.tsx`
+- `src/contexts/AuthContext.test.tsx`
+- `src/lib/api.test.ts`
 - `src/lib/badges.test.ts`
+- `src/pages/Dashboard.test.tsx`
+- `src/pages/Login.test.tsx`
 
 ### Setup
 
@@ -123,8 +127,10 @@ Test files are co-located with source files using the `.test.ts` / `.test.tsx` s
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
 
 1. **Backend lint** -- `ruff check app/ tests/`
-2. **Backend security** -- `pip-audit`, `bandit`
+2. **Backend security** -- `pip-audit` (dependency vulnerabilities), `bandit` (static security analysis, high-confidence findings)
 3. **Backend tests** -- SQLite and PostgreSQL, with 100% coverage enforcement
 4. **Frontend lint** -- `eslint`
 5. **Frontend tests** -- Vitest
 6. **Frontend build** -- Verify production build succeeds
+
+Third-party deprecation warnings are filtered in `pyproject.toml` to keep test output clean.
