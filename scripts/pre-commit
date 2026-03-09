@@ -20,8 +20,26 @@ echo -e "${GREEN}Lint check passed.${NC}"
 
 echo ""
 echo "=== Running tests with coverage ==="
-if ! pytest --cov=app --cov-report=term-missing --cov-fail-under=100 -q; then
+if ! pytest --cov=app --cov-report=term-missing --cov-fail-under=100 -q -W error::UserWarning -W error::FutureWarning; then
     echo -e "${RED}Tests failed or coverage is below 100%. Fix before committing.${NC}"
     exit 1
 fi
 echo -e "${GREEN}All tests passed with 100% coverage.${NC}"
+
+echo ""
+echo "=== Checking for test warnings ==="
+WARNING_OUTPUT=$(pytest -q --tb=no 2>&1 | grep -E "^[0-9]+ passed" || true)
+if echo "$WARNING_OUTPUT" | grep -q "warning"; then
+    echo -e "${RED}Tests produced warnings:${NC}"
+    pytest -q --tb=no 2>&1 | tail -20
+    exit 1
+fi
+echo -e "${GREEN}No test warnings.${NC}"
+
+echo ""
+echo "=== Running pip-audit ==="
+if ! pip-audit --desc --skip-editable; then
+    echo -e "${RED}pip-audit found vulnerabilities. Fix before committing.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}pip-audit passed.${NC}"

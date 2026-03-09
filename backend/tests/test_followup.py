@@ -201,9 +201,9 @@ def test_get_overdue_follow_ups_only_own(client, admin_user, regular_user, db):
 
 def test_follow_ups_no_auth(client):
     response = client.get("/contacts/follow-ups/due")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_overdue_no_auth(client):
     response = client.get("/contacts/follow-ups/overdue")
-    assert response.status_code == 403
+    assert response.status_code == 401

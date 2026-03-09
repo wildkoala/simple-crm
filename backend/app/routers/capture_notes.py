@@ -62,7 +62,7 @@ def upsert_capture_note(
     """Create or update a capture note section."""
     if section not in VALID_SECTIONS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail=f"Invalid section. Must be one of: {VALID_SECTIONS}",
         )
 

@@ -122,7 +122,7 @@ def test_register_no_auth(client):
             "password": "password12345",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_me(client, admin_headers, admin_user):
@@ -135,7 +135,7 @@ def test_get_me(client, admin_headers, admin_user):
 
 def test_get_me_no_auth(client):
     response = client.get("/auth/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_me_inactive_user(client, db):
@@ -298,7 +298,7 @@ def test_password_change_no_auth(client):
             "new_password": "newpassword123",
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_get_current_user_no_sub_in_token(client):

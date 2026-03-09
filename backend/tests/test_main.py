@@ -131,6 +131,10 @@ def test_extra_cors_origins():
         import app.main as main_mod
 
         importlib.reload(main_mod)
+        origins = main_mod.allowed_origins
+
+    assert "http://extra1.com" in origins
+    assert "http://extra2.com" in origins
 
     # Reload back to default to avoid affecting other tests
     with patch.dict("os.environ", {}, clear=False):
