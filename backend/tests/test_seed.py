@@ -86,7 +86,7 @@ def test_seed_database_already_seeded(db):
     assert db.query(User).count() == 1
 
 
-@patch.dict("os.environ", {"ENV": "production"})
+@patch.dict("os.environ", {"ENV": "production", "SEED_DEMO_DATA": ""})
 def test_seed_database_skipped_in_production(db):
     """Seeding should be skipped in non-development environments."""
     seed_database(db)

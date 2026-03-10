@@ -1861,9 +1861,7 @@ def test_contacts_import_success(client, admin_headers, gmail_integration):
     assert data["errors"] == []
 
 
-def test_contacts_import_skips_existing(
-    client, admin_headers, gmail_integration, sample_contact
-):
+def test_contacts_import_skips_existing(client, admin_headers, gmail_integration, sample_contact):
     """Skips contacts that already exist (by email)."""
     payload = {
         "contacts": [

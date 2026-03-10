@@ -325,9 +325,7 @@ async def gmail_contacts_preview(
     # Check which emails already exist in the user's contacts
     existing_emails = {
         row[0].lower()
-        for row in db.query(Contact.email).filter(
-            Contact.assigned_user_id == current_user.id
-        ).all()
+        for row in db.query(Contact.email).filter(Contact.assigned_user_id == current_user.id).all()
     }
 
     previews = [
@@ -372,9 +370,7 @@ async def gmail_contacts_import(
 
     existing_emails = {
         row[0].lower()
-        for row in db.query(Contact.email).filter(
-            Contact.assigned_user_id == current_user.id
-        ).all()
+        for row in db.query(Contact.email).filter(Contact.assigned_user_id == current_user.id).all()
     }
 
     imported = 0

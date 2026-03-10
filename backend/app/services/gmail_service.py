@@ -58,6 +58,10 @@ def get_auth_url(state: str) -> str:
 
 
 def exchange_code(code: str) -> dict:
+    # Google often returns additional scopes (openid, userinfo.profile) beyond
+    # what was requested, causing oauthlib to raise a scope-change Warning.
+    # Setting this env var tells oauthlib to accept the changed scopes.
+    os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
     flow = Flow.from_client_config(_get_client_config(), scopes=SCOPES)
     flow.redirect_uri = GOOGLE_REDIRECT_URI
     flow.fetch_token(code=code)
