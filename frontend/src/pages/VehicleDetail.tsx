@@ -107,27 +107,27 @@ export default function VehicleDetail() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" asChild>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <Button variant="outline" size="icon" asChild className="shrink-0">
               <Link to="/vehicles"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight truncate">
               {id === 'new' ? 'New Contract Vehicle' : display.name}
             </h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end sm:self-auto">
             {isEditing ? (
               <>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save</>}
+                <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Save</span></>}
                 </Button>
-                {id !== 'new' && <Button variant="outline" onClick={() => { setEditForm(null); setIsEditing(false); }}><X className="mr-2 h-4 w-4" />Cancel</Button>}
+                {id !== 'new' && <Button variant="outline" size="sm" onClick={() => { setEditForm(null); setIsEditing(false); }}><X className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Cancel</span></Button>}
               </>
             ) : (
               <>
-                <Button onClick={() => { setEditForm({ ...vehicle! }); setIsEditing(true); }}><Edit className="mr-2 h-4 w-4" />Edit</Button>
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
+                <Button size="sm" onClick={() => { setEditForm({ ...vehicle! }); setIsEditing(true); }}><Edit className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Edit</span></Button>
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}><Trash2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Delete</span></Button>
               </>
             )}
           </div>
@@ -149,7 +149,7 @@ export default function VehicleDetail() {
                   <Label>Name</Label>
                   <Input value={editForm!.name} onChange={(e) => setEditForm({ ...editForm!, name: e.target.value })} placeholder="Vehicle name" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Agency</Label>
                     <Input value={editForm!.agency || ''} onChange={(e) => setEditForm({ ...editForm!, agency: e.target.value })} />
@@ -159,7 +159,7 @@ export default function VehicleDetail() {
                     <Input value={editForm!.contract_number || ''} onChange={(e) => setEditForm({ ...editForm!, contract_number: e.target.value })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Ceiling Value ($)</Label>
                     <Input type="number" value={editForm!.ceiling_value ?? ''} onChange={(e) => setEditForm({ ...editForm!, ceiling_value: e.target.value ? Number(e.target.value) : undefined })} />
@@ -186,7 +186,7 @@ export default function VehicleDetail() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-muted-foreground">Agency</Label>
                     <p className="mt-1">{display.agency || 'N/A'}</p>
@@ -196,7 +196,7 @@ export default function VehicleDetail() {
                     <p className="mt-1">{display.contract_number || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-muted-foreground">Ceiling Value</Label>
                     <p className="mt-1 font-semibold">{formatCurrency(display.ceiling_value)}</p>

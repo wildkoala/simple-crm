@@ -69,14 +69,14 @@ export default function Dashboard() {
     <Layout>
       <div className="space-y-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
             Simple CRM overview
           </p>
         </div>
 
         {/* Pipeline Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
           {pipelineMetrics && (
             <>
               <Card className="cursor-pointer transition-colors hover:bg-accent/50" onClick={() => navigate('/pipeline')}>

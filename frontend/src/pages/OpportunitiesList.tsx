@@ -60,9 +60,9 @@ export default function OpportunitiesList() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Opportunities</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Opportunities</h2>
             <p className="text-muted-foreground">Capture pipeline & opportunity tracking</p>
           </div>
           <Button asChild>
@@ -73,7 +73,7 @@ export default function OpportunitiesList() {
           </Button>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -84,7 +84,7 @@ export default function OpportunitiesList() {
             />
           </div>
           <Select value={stageFilter} onValueChange={setStageFilter}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
@@ -121,7 +121,7 @@ export default function OpportunitiesList() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:gap-x-6 text-sm text-muted-foreground">
                       <span className="font-medium text-foreground">
                         {formatCurrency(opp.estimated_value)}
                       </span>

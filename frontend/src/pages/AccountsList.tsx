@@ -47,9 +47,9 @@ export default function AccountsList() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Accounts</h2>
             <p className="text-muted-foreground">Organizations & agency relationships</p>
           </div>
           <Button asChild>
@@ -60,7 +60,7 @@ export default function AccountsList() {
           </Button>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -71,7 +71,7 @@ export default function AccountsList() {
             />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-full sm:w-52">
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -94,18 +94,18 @@ export default function AccountsList() {
             {filtered.map((account) => (
               <Link key={account.id} to={`/accounts/${account.id}`}>
                 <Card className="p-6 transition-shadow hover:shadow-md">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
-                      <Building2 className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                      <Building2 className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
                       <div>
                         <h3 className="font-semibold">{account.name}</h3>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
                           {account.location && <span>{account.location}</span>}
                           {account.office && <span>{account.office}</span>}
                         </div>
                       </div>
                     </div>
-                    <Badge variant={getAccountTypeBadge(account.account_type)}>
+                    <Badge variant={getAccountTypeBadge(account.account_type)} className="self-start">
                       {formatAccountType(account.account_type)}
                     </Badge>
                   </div>

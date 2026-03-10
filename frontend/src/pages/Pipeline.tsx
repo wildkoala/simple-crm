@@ -111,12 +111,12 @@ export default function Pipeline() {
     <Layout>
       <div className="space-y-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Pipeline</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Pipeline</h2>
           <p className="text-muted-foreground">Capture pipeline overview & forecasting</p>
         </div>
 
         {metrics && (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
@@ -166,7 +166,7 @@ export default function Pipeline() {
             <CardTitle>Pipeline Board</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4 lg:grid-cols-8">
+            <div className="flex gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-4 lg:grid-cols-8">
               {STAGE_ORDER.map((stage) => {
                 const stageOpps = oppsByStage[stage] || [];
                 const stageValue = stageOpps.reduce((sum, o) => sum + (o.estimated_value || 0), 0);
@@ -174,7 +174,7 @@ export default function Pipeline() {
                 return (
                   <div
                     key={stage}
-                    className={`space-y-2 rounded-lg p-2 transition-colors min-h-[120px] ${isOver ? 'bg-accent/50 ring-2 ring-primary/30' : ''}`}
+                    className={`space-y-2 rounded-lg p-2 transition-colors min-h-[120px] min-w-[140px] flex-shrink-0 md:min-w-0 ${isOver ? 'bg-accent/50 ring-2 ring-primary/30' : ''}`}
                     onDragOver={(e) => handleDragOver(e, stage)}
                     onDragLeave={(e) => handleDragLeave(e, stage)}
                     onDrop={(e) => handleDrop(e, stage)}

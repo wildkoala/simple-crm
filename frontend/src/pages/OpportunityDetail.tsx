@@ -247,34 +247,34 @@ export default function OpportunityDetail() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" asChild>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <Button variant="outline" size="icon" asChild className="shrink-0">
               <Link to="/opportunities"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight truncate">
               {isNew ? 'New Opportunity' : display.title}
             </h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end sm:self-auto">
             {isEditing ? (
               <>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save</>}
+                <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Save</span></>}
                 </Button>
                 {!isNew && (
-                  <Button variant="outline" onClick={() => { setEditForm(null); setIsEditing(false); }}>
-                    <X className="mr-2 h-4 w-4" />Cancel
+                  <Button variant="outline" size="sm" onClick={() => { setEditForm(null); setIsEditing(false); }}>
+                    <X className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Cancel</span>
                   </Button>
                 )}
               </>
             ) : (
               <>
-                <Button onClick={() => { setEditForm({ ...opp! }); setIsEditing(true); }}>
-                  <Edit className="mr-2 h-4 w-4" />Edit
+                <Button size="sm" onClick={() => { setEditForm({ ...opp! }); setIsEditing(true); }}>
+                  <Edit className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Edit</span>
                 </Button>
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />Delete
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Delete</span>
                 </Button>
               </>
             )}
@@ -304,7 +304,7 @@ export default function OpportunityDetail() {
                   <Label>Description</Label>
                   <Textarea value={editForm!.description} onChange={(e) => setEditForm({ ...editForm!, description: e.target.value })} rows={3} placeholder="Describe the opportunity..." />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Agency</Label>
                     <Input value={editForm!.agency || ''} onChange={(e) => setEditForm({ ...editForm!, agency: e.target.value })} placeholder="e.g., Department of Defense" />
@@ -319,7 +319,7 @@ export default function OpportunityDetail() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Estimated Value ($)</Label>
                     <Input type="number" value={editForm!.estimated_value ?? ''} onChange={(e) => setEditForm({ ...editForm!, estimated_value: e.target.value ? Number(e.target.value) : undefined })} />
@@ -343,12 +343,12 @@ export default function OpportunityDetail() {
                     <div className="border-t border-border pt-4">
                       <p className="text-sm font-medium text-muted-foreground mb-4">Government Contract Fields</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2"><Label>Solicitation Number</Label><Input value={editForm!.solicitation_number || ''} onChange={(e) => setEditForm({ ...editForm!, solicitation_number: e.target.value })} /></div>
                       <div className="space-y-2"><Label>SAM.gov Notice ID</Label><Input value={editForm!.sam_gov_notice_id || ''} onChange={(e) => setEditForm({ ...editForm!, sam_gov_notice_id: e.target.value })} /></div>
                       <div className="space-y-2"><Label>NAICS Code</Label><Input value={editForm!.naics_code || ''} onChange={(e) => setEditForm({ ...editForm!, naics_code: e.target.value })} /></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Set-Aside Type</Label>
                         <Select value={editForm!.set_aside_type || 'none'} onValueChange={(v) => setEditForm({ ...editForm!, set_aside_type: v as api.Opportunity['set_aside_type'] })}>
@@ -358,11 +358,11 @@ export default function OpportunityDetail() {
                       </div>
                       <div className="space-y-2"><Label>Submission Link</Label><Input value={editForm!.submission_link || ''} onChange={(e) => setEditForm({ ...editForm!, submission_link: e.target.value })} placeholder="https://..." /></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2"><Label>Deadline</Label><Input type="date" value={editForm!.deadline?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, deadline: e.target.value || undefined })} /></div>
                       <div className="space-y-2"><Label>Expected Release Date</Label><Input type="date" value={editForm!.expected_release_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, expected_release_date: e.target.value || undefined })} /></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2"><Label>Proposal Due Date</Label><Input type="date" value={editForm!.proposal_due_date?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, proposal_due_date: e.target.value || undefined })} /></div>
                       <div className="space-y-2"><Label>Award Date Estimate</Label><Input type="date" value={editForm!.award_date_estimate?.split('T')[0] || ''} onChange={(e) => setEditForm({ ...editForm!, award_date_estimate: e.target.value || undefined })} /></div>
                     </div>
@@ -381,27 +381,27 @@ export default function OpportunityDetail() {
                 {display.description && (
                   <div><Label className="text-muted-foreground">Description</Label><p className="mt-1 whitespace-pre-wrap">{display.description}</p></div>
                 )}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div><Label className="text-muted-foreground">Agency</Label><p className="mt-1">{display.agency || 'Not specified'}</p></div>
                   <div><Label className="text-muted-foreground">Estimated Value</Label><p className="mt-1 font-semibold text-lg">{formatCurrency(display.estimated_value)}</p></div>
                 </div>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                   <div><Label className="text-muted-foreground">Win Probability</Label><p className="mt-1 font-semibold">{display.win_probability !== undefined && display.win_probability !== null ? `${display.win_probability}%` : 'N/A'}</p></div>
                   {display.source && (<div><Label className="text-muted-foreground">Source</Label><p className="mt-1">{display.source.replace(/_/g, ' ')}</p></div>)}
                 </div>
                 {display.is_government_contract && (
                   <>
                     <div className="border-t border-border pt-4"><p className="text-sm font-medium text-muted-foreground mb-4">Government Contract Details</p></div>
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                       <div><Label className="text-muted-foreground">Solicitation Number</Label><p className="mt-1">{display.solicitation_number || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">SAM.gov Notice ID</Label><p className="mt-1">{display.sam_gov_notice_id || 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">NAICS</Label><p className="mt-1">{display.naics_code || 'N/A'}</p></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div><Label className="text-muted-foreground">Set-Aside</Label><p className="mt-1">{formatSetAside(display.set_aside_type)}</p></div>
-                      {display.submission_link && (<div><Label className="text-muted-foreground">Submission Link</Label><p className="mt-1"><a href={display.submission_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{display.submission_link}</a></p></div>)}
+                      {display.submission_link && (<div><Label className="text-muted-foreground">Submission Link</Label><p className="mt-1 break-all"><a href={display.submission_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{display.submission_link}</a></p></div>)}
                     </div>
-                    <div className="grid grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
                       <div><Label className="text-muted-foreground">Deadline</Label><p className="mt-1">{display.deadline ? new Date(display.deadline).toLocaleDateString() : 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Expected Release</Label><p className="mt-1">{display.expected_release_date ? new Date(display.expected_release_date).toLocaleDateString() : 'N/A'}</p></div>
                       <div><Label className="text-muted-foreground">Proposal Due</Label><p className="mt-1 font-medium">{display.proposal_due_date ? new Date(display.proposal_due_date).toLocaleDateString() : 'N/A'}</p></div>
@@ -421,14 +421,14 @@ export default function OpportunityDetail() {
         {/* Tabs - only show when viewing an existing opportunity */}
         {!isNew && !isEditing && (
           <>
-            <div className="flex gap-1 border-b border-border">
+            <div className="flex gap-1 border-b border-border overflow-x-auto">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                       activeTab === tab.key
                         ? 'border-b-2 border-primary text-foreground'
                         : 'text-muted-foreground hover:text-foreground'
@@ -455,7 +455,7 @@ export default function OpportunityDetail() {
                 <CardContent>
                   {showEventForm && (
                     <div className="mb-6 p-4 rounded-lg border border-border space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Date</Label>
                           <Input type="date" value={newEvent.date} onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })} />

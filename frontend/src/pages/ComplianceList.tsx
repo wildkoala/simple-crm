@@ -80,9 +80,9 @@ export default function ComplianceList() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Compliance & Certifications</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Compliance & Certifications</h2>
             <p className="text-muted-foreground">Track certifications & expiration dates</p>
           </div>
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -166,12 +166,12 @@ export default function ComplianceList() {
           {records.length > 0 ? (
             records.map((record) => (
               <Card key={record.id} className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-start gap-3">
-                    <ShieldCheck className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <ShieldCheck className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
                     <div>
                       <h3 className="font-semibold">{formatCertificationType(record.certification_type)}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                         {record.issued_by && <span>Issued by: {record.issued_by}</span>}
                         {record.issue_date && <span>Issued: {new Date(record.issue_date).toLocaleDateString()}</span>}
                         {record.expiration_date && <span>Expires: {new Date(record.expiration_date).toLocaleDateString()}</span>}
@@ -179,7 +179,7 @@ export default function ComplianceList() {
                       {record.notes && <p className="mt-2 text-sm text-muted-foreground">{record.notes}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-start">
                     <Badge variant={getComplianceStatusBadge(record.status)}>
                       {record.status.replace(/_/g, ' ')}
                     </Badge>

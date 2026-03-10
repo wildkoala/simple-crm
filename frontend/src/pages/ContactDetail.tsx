@@ -254,23 +254,24 @@ export default function ContactDetail() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Button variant="outline" size="icon" asChild>
               <Link to="/contacts">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-3xl font-bold tracking-tight truncate">
                 {contact.first_name} {contact.last_name}
               </h2>
-              <p className="text-muted-foreground">{contact.organization}</p>
+              <p className="text-muted-foreground text-sm sm:text-base">{contact.organization}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end sm:self-auto">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 setEditForm({
                   first_name: contact.first_name,
@@ -288,12 +289,12 @@ export default function ContactDetail() {
                 setIsEditDialogOpen(true);
               }}
             >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
+              <Edit className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
-            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+            <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
         </div>

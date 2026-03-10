@@ -45,9 +45,9 @@ export default function VehiclesList() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Contract Vehicles</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Contract Vehicles</h2>
             <p className="text-muted-foreground">Manage contract vehicles & schedules</p>
           </div>
           <Button asChild>
@@ -77,12 +77,12 @@ export default function VehiclesList() {
             {filtered.map((vehicle) => (
               <Link key={vehicle.id} to={`/vehicles/${vehicle.id}`}>
                 <Card className="p-6 transition-shadow hover:shadow-md">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
-                      <FileStack className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                      <FileStack className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
                       <div>
                         <h3 className="font-semibold">{vehicle.name}</h3>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                           {vehicle.agency && <span>{vehicle.agency}</span>}
                           {vehicle.contract_number && <span>#{vehicle.contract_number}</span>}
                           {vehicle.ceiling_value && <span>Ceiling: {formatCurrency(vehicle.ceiling_value)}</span>}
@@ -93,7 +93,7 @@ export default function VehiclesList() {
                       </div>
                     </div>
                     {vehicle.prime_or_sub && (
-                      <Badge variant={vehicle.prime_or_sub === 'prime' ? 'default' : 'outline'}>
+                      <Badge variant={vehicle.prime_or_sub === 'prime' ? 'default' : 'outline'} className="self-start">
                         {vehicle.prime_or_sub}
                       </Badge>
                     )}

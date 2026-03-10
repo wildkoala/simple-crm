@@ -110,34 +110,34 @@ export default function AccountDetail() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" asChild>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <Button variant="outline" size="icon" asChild className="shrink-0">
               <Link to="/accounts"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
-            <h2 className="text-3xl font-bold tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight truncate">
               {id === 'new' ? 'New Account' : display.name}
             </h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-end sm:self-auto">
             {isEditing ? (
               <>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save</>}
+                <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Save</span></>}
                 </Button>
                 {id !== 'new' && (
-                  <Button variant="outline" onClick={() => { setEditForm(null); setIsEditing(false); }}>
-                    <X className="mr-2 h-4 w-4" />Cancel
+                  <Button variant="outline" size="sm" onClick={() => { setEditForm(null); setIsEditing(false); }}>
+                    <X className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Cancel</span>
                   </Button>
                 )}
               </>
             ) : (
               <>
-                <Button onClick={() => { setEditForm({ ...account! }); setIsEditing(true); }}>
-                  <Edit className="mr-2 h-4 w-4" />Edit
+                <Button size="sm" onClick={() => { setEditForm({ ...account! }); setIsEditing(true); }}>
+                  <Edit className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Edit</span>
                 </Button>
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />Delete
+                <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Delete</span>
                 </Button>
               </>
             )}
@@ -162,7 +162,7 @@ export default function AccountDetail() {
                   <Label>Name</Label>
                   <Input value={editForm!.name} onChange={(e) => setEditForm({ ...editForm!, name: e.target.value })} placeholder="Organization name" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Type</Label>
                     <Select value={editForm!.account_type} onValueChange={(v) => setEditForm({ ...editForm!, account_type: v as api.Account['account_type'] })}>
@@ -177,7 +177,7 @@ export default function AccountDetail() {
                     <Input value={editForm!.parent_agency || ''} onChange={(e) => setEditForm({ ...editForm!, parent_agency: e.target.value })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Office</Label>
                     <Input value={editForm!.office || ''} onChange={(e) => setEditForm({ ...editForm!, office: e.target.value })} />
@@ -198,7 +198,7 @@ export default function AccountDetail() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-muted-foreground">Parent Agency</Label>
                     <p className="mt-1">{display.parent_agency || 'N/A'}</p>
@@ -208,7 +208,7 @@ export default function AccountDetail() {
                     <p className="mt-1">{display.office || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-muted-foreground">Location</Label>
                     <p className="mt-1">{display.location || 'N/A'}</p>

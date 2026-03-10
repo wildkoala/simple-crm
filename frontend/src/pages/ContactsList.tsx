@@ -69,9 +69,9 @@ export default function ContactsList() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Contacts</h2>
             <p className="text-muted-foreground">
               Manage your contact relationships
             </p>
@@ -80,20 +80,22 @@ export default function ContactsList() {
             {gmailConnected && (
               <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
                 <Download className="mr-2 h-4 w-4" />
-                Import from Gmail
+                <span className="hidden sm:inline">Import from Gmail</span>
+                <span className="sm:hidden">Import</span>
               </Button>
             )}
             <Button asChild>
               <Link to="/contacts/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Contact
+                <span className="hidden sm:inline">Add Contact</span>
+                <span className="sm:hidden">Add</span>
               </Link>
             </Button>
           </div>
         </div>
 
         {/* Search and Filter */}
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -105,7 +107,7 @@ export default function ContactsList() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]" aria-label="Filter by status">
+            <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by status">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
